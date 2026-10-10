@@ -12,36 +12,36 @@
 #define SCANNER_TOKEN_OK        0
 #define ERROR_OK                0
 
-// 1: Lexikalna chyba (chybna struktura lexemy, komentare, odsadenie)
+// Lexikalna chyba
 #define ERROR_LEX               1
 #define SCANNER_ERROR_LEX       1
 
-// 2: Syntakticka chyba (chybna syntax, chybajuci prolog, nepovolena konstrukcia)
+// Syntakticka chyba
 #define ERROR_SYNTAX            2
 #define SCANNER_ERROR_SYNTAX    2
 
-// 3: Semanticka chyba - nedefinovana funkcia, premenna, typ; chybajuci @main
+// Semanticka chyba: nedefinovana funkcia alebo premenna, chybajuci @main
 #define ERROR_SEM_UNDEF         3
 
-// 4: Semanticka chyba - neplatna redefinicia funkcie, premennej alebo typu
+// Semanticka chyba: neplatna redefinicia funkcie alebo premennej
 #define ERROR_SEM_REDEF         4
 
-// 5: Semanticka chyba - nespravny pocet alebo typ parametrov funkcie; neplatne parametre @main
+// Semanticka chyba: nespravny pocet alebo typ parametrov funkcie
 #define ERROR_SEM_PARAM         5
 
-// 6: Semanticka chyba - typova kompatibilita vo vyraze, priradeni, navrate
+// Semanticka chyba: typova nekompatibilita vo vyraze alebo priradeni
 #define ERROR_SEM_TYPE          6
 
-// 7: Semanticka chyba - zapis do nemenneho identifikatora (val) alebo formalneho parametra
+// Semanticka chyba: zapis do nemenneho identifikatora (val) alebo parametra
 #define ERROR_SEM_CONST         7
 
-// 10: Ostatne semanticke chyby (neplatny return atd.)
+// Semanticka chyba: ostatne semanticke chyby (neplatny return)
 #define ERROR_SEM_OTHER         10
 
-// 40: Chyba behu (index mimo rozsah, delenie nulou atd.)
+// Behova chyba (index mimo rozsah, delenie nulou)
 #define ERROR_RUNTIME           40
 
-// 99: Interna chyba prekladaca (zlyhanie alokacie pamate atd.)
+// Interna chyba prekladaca (zlyhanie alokacie pamate)
 #define ERROR_INTERNAL          99
 
 #endif // _ERROR_H
