@@ -2,7 +2,7 @@
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
  *
  * @file scanner.c
- * @brief Clean, robust lexical analyzer for IFJ26 base language (Scala 3 subset).
+ * @brief Lexikalny analyzator pre jazyk IFJ26 (podmnozina jazyka Scala 3).
  */
 
 #include <stdio.h>
@@ -14,16 +14,18 @@
 #include "scanner.h"
 #include "error.h"
 
-#define BUFFER_CHUNK 32
-#define MAX_INDENT_LEVELS 128
-#define UNGET_BUFFER_SIZE 5
+#define BUFFER_CHUNK 32          // Krok zvacsovania dynamickeho buffera
+#define MAX_INDENT_LEVELS 128    // Maximalna hlbka odsadenia blokov
+#define UNGET_BUFFER_SIZE 5      // Velkost zasobnika vratenych tokenov
 
+// Dynamicky rastuci buffer pre nacitanie identifikatorov, retazcov a cisiel
 typedef struct {
     char *data;
     size_t len;
     size_t cap;
 } Buffer;
 
+// Inicializacia dynamickeho buffera
 static bool buf_init(Buffer *b) {
     b->len = 0; b->cap = BUFFER_CHUNK;
     if (!(b->data = (char *)malloc(b->cap))) return false;
@@ -31,6 +33,7 @@ static bool buf_init(Buffer *b) {
     return true;
 }
 
+// Pridanie znaku na koniec buffera
 static bool buf_add(Buffer *b, char c) {
     if (b->len + 1 >= b->cap) {
         char *ndata = (char *)realloc(b->data, b->cap * 2);
@@ -42,11 +45,13 @@ static bool buf_add(Buffer *b, char c) {
     return true;
 }
 
+// Uvolnenie pamate buffera
 static void buf_free(Buffer *b) {
     if (b->data) free(b->data);
     b->data = NULL; b->len = b->cap = 0;
 }
 
+// Tabulka 14 zakladnych klucovych slov
 static const struct { const char *name; Keyword kw; } KEYWORDS[] = {
     {"def", KEYWORD_DEF},       {"do", KEYWORD_DO},
     {"Double", KEYWORD_DOUBLE}, {"else", KEYWORD_ELSE},
@@ -58,24 +63,26 @@ static const struct { const char *name; Keyword kw; } KEYWORDS[] = {
 };
 #define NUM_KEYWORDS (sizeof(KEYWORDS) / sizeof(KEYWORDS[0]))
 
-// InternÃ½ stav scanneru
-static FILE *source_file = NULL;
-static int indent_stack[MAX_INDENT_LEVELS];
-static int indent_level = 0;
-static int pending_dedents = 0;
-static int paren_depth = 0;
-static int logical_line_indent = 0;
-static bool is_at_line_start = true;
-static bool logical_line_has_tokens = false;
-static bool eof_reached = false;
-static Token unget_buf[UNGET_BUFFER_SIZE];
-static int unget_top = -1;
+// Interny stav scanneru
+static FILE *source_file = NULL;                    // Vstupny subor
+static int indent_stack[MAX_INDENT_LEVELS];         // Zasobnik urovni odsadenia (pocet medzier)
+static int indent_level = 0;                        // Aktualny index v zasobniku odsadenia
+static int pending_dedents = 0;                     // Pocet cakajucich DEDENTov pri navrate o viac urovni
+static int paren_depth = 0;                         // Hlbka zanorenia okruhlych zatvoriek
+static int logical_line_indent = 0;                 // Odsadenie zaciatku aktualneho logickeho riadku
+static bool is_at_line_start = true;                // Priznak zaciatku noveho fyzickeho riadku
+static bool logical_line_has_tokens = false;        // Priznak, ci boli na riadku emitovane tokeny
+static bool eof_reached = false;                    // Priznak dosiahnutia konca suboru
+static Token unget_buf[UNGET_BUFFER_SIZE];          // Zasobnik vratenych tokenov (lookahead)
+static int unget_top = -1;                          // Index vrchu zasobnika vratenych tokenov
 
+// Nastavenie zdrojoveho suboru a reset scanneru
 void set_source_file(FILE *f) {
     source_file = f;
     reset_scanner();
 }
 
+// Vynulovanie vnutorneho stavu scanneru
 void reset_scanner(void) {
     indent_stack[0] = indent_level = pending_dedents = paren_depth = logical_line_indent = 0;
     is_at_line_start = true;
@@ -83,6 +90,7 @@ void reset_scanner(void) {
     while (unget_top >= 0) free_token_attribute(&unget_buf[unget_top--]);
 }
 
+// Uvolnenie dynamicky alokovaneho retazca v tokene
 void free_token_attribute(Token *token) {
     if (token && (token->type == TOKEN_TYPE_IDENTIFIER || token->type == TOKEN_TYPE_STRING)) {
         free(token->attribute.string);
@@ -90,6 +98,7 @@ void free_token_attribute(Token *token) {
     }
 }
 
+// Vratenie tokenu spat do zasobnika lookaheadu
 int unget_token(Token token) {
     if (unget_top >= UNGET_BUFFER_SIZE - 1) {
         free_token_attribute(&token);
@@ -101,12 +110,14 @@ int unget_token(Token token) {
     return SCANNER_TOKEN_OK;
 }
 
+// Pomocne emitovanie jednoducheho tokenu bez atributu
 static inline int emit_token(Token *token, TokenType type) {
     logical_line_has_tokens = true;
     token->type = type;
     return SCANNER_TOKEN_OK;
 }
 
+// Nacitanie znaku s normalizaciou koncov riadkov (\r\n -> \n)
 static inline int get_char(void) {
     int c = getc(source_file);
     if (c == '\r') {
@@ -117,6 +128,7 @@ static inline int get_char(void) {
     return c;
 }
 
+// Spracovanie konca suboru: emitovanie EOL, uzatvaracich DEDENTov a EOF
 static int handle_eof(Token *token) {
     eof_reached = true;
     if (logical_line_has_tokens) {
@@ -133,6 +145,7 @@ static int handle_eof(Token *token) {
     return SCANNER_TOKEN_OK;
 }
 
+// Preskocenie blokoveho komentara s podporou vnarania
 static int skip_block_comment(bool *out_has_newline) {
     int nest = 1;
     *out_has_newline = false;
@@ -150,6 +163,7 @@ static int skip_block_comment(bool *out_has_newline) {
     return SCANNER_TOKEN_OK;
 }
 
+// Overenie pravidla: za viacriadkovym komentarom nesmu byt dalsie tokeny na riadku
 static int verify_rest_of_multiline_line(void) {
     int c;
     while ((c = get_char()) != '\n' && c != EOF) {
@@ -173,6 +187,7 @@ static int verify_rest_of_multiline_line(void) {
     return SCANNER_TOKEN_OK;
 }
 
+// Preskocenie medzier a komentarov s detekciou nepovolenych tabulatorov
 static int skip_to_next_char(int *out_char, int *spaces, bool *tab_found) {
     while (1) {
         int c = get_char();
@@ -181,11 +196,13 @@ static int skip_to_next_char(int *out_char, int *spaces, bool *tab_found) {
         if (c == '/') {
             int n = getc(source_file);
             if (n == '/') {
+                // Riadkovy komentar
                 while ((c = get_char()) != '\n' && c != EOF);
                 *out_char = c;
                 return SCANNER_TOKEN_OK;
             }
             if (n == '*') {
+                // Blokovy komentar
                 bool nl = false;
                 int res = skip_block_comment(&nl);
                 if (res != SCANNER_TOKEN_OK) return res;
@@ -204,6 +221,7 @@ static int skip_to_next_char(int *out_char, int *spaces, bool *tab_found) {
     }
 }
 
+// Nacitanie cislic s oddelovacimi podtrzitkami (napr. 1_000)
 static int scan_digits_with_underscores(Buffer *buf, int *next_char) {
     int c = get_char();
     while (isdigit(c) || c == '_') {
@@ -219,6 +237,7 @@ static int scan_digits_with_underscores(Buffer *buf, int *next_char) {
     return SCANNER_TOKEN_OK;
 }
 
+// Spracovanie ciselnych literalov (cela a desatinne cisla, exponent, sufix d/D)
 static int scan_number(Token *token, int first_char) {
     Buffer buf;
     if (!buf_init(&buf)) return ERROR_INTERNAL;
@@ -232,6 +251,7 @@ static int scan_number(Token *token, int first_char) {
     } while (0)
 
     if (c == '.') {
+        // Desatinne cislo zacinajuce bodkou (.5)
         is_double = true;
         int frac = get_char();
         if (!isdigit(frac)) { buf_free(&buf); return SCANNER_ERROR_LEX; }
@@ -240,6 +260,7 @@ static int scan_number(Token *token, int first_char) {
         }
         SCAN_MORE();
     } else if (c == '0') {
+        // Kontrola nepovolenej uvodnej nuly (napr. 01, 0x10)
         if (!buf_add(&buf, '0')) { buf_free(&buf); return ERROR_INTERNAL; }
         int next = get_char();
         if (next == 'x' || next == 'X' || isdigit(next) || next == '_') {
@@ -247,11 +268,13 @@ static int scan_number(Token *token, int first_char) {
         }
         c = next;
     } else {
+        // Bezna sekvencia cislic celeho cisla
         if (!buf_add(&buf, (char)c)) { buf_free(&buf); return ERROR_INTERNAL; }
         SCAN_MORE();
     }
 
     if (!is_double && c == '.') {
+        // Desatinna cast nasledujuca po celom cisle
         int peek = get_char();
         if (isdigit(peek)) {
             is_double = true;
@@ -260,6 +283,7 @@ static int scan_number(Token *token, int first_char) {
             }
             SCAN_MORE();
         } else {
+            // Bodka ako operator pristupu k metode (napr. 12.toString)
             if (peek != EOF) ungetc(peek, source_file);
             Token dot_tok = {.type = TOKEN_TYPE_DOT, .attribute = {.string = NULL}};
             if (unget_token(dot_tok) != SCANNER_TOKEN_OK) { buf_free(&buf); return ERROR_INTERNAL; }
@@ -268,6 +292,7 @@ static int scan_number(Token *token, int first_char) {
     }
 
     if (c == 'e' || c == 'E') {
+        // Exponencialna cast
         is_double = true;
         if (!buf_add(&buf, (char)c)) { buf_free(&buf); return ERROR_INTERNAL; }
         int peek = get_char();
@@ -283,6 +308,7 @@ static int scan_number(Token *token, int first_char) {
 #undef SCAN_MORE
 
     if (c == 'd' || c == 'D') {
+        // Sufix d alebo D pre Double literal
         int peek = get_char();
         if (isalnum(peek) || peek == '_') {
             if (peek != EOF) ungetc(peek, source_file);
@@ -295,6 +321,7 @@ static int scan_number(Token *token, int first_char) {
     }
 
     if (c != EOF) {
+        // Neplatny znak bezprostredne za cislom
         if (isalnum(c) || c == '_') { buf_free(&buf); return SCANNER_ERROR_LEX; }
         ungetc(c, source_file);
     }
@@ -306,6 +333,7 @@ static int scan_number(Token *token, int first_char) {
     return SCANNER_TOKEN_OK;
 }
 
+// Nacitanie jednoriadkoveho retazca ("...") s escape sekvenciami
 static int scan_singleline_string(Token *token) {
     Buffer buf;
     if (!buf_init(&buf)) return ERROR_INTERNAL;
@@ -331,6 +359,7 @@ static int scan_singleline_string(Token *token) {
     return SCANNER_TOKEN_OK;
 }
 
+// Nacitanie viacriadkoveho retazca ("""...""")
 static int scan_multiline_string(Token *token) {
     Buffer buf;
     if (!buf_init(&buf)) return ERROR_INTERNAL;
@@ -354,12 +383,14 @@ static int scan_multiline_string(Token *token) {
     return SCANNER_ERROR_LEX;
 }
 
+// Rozhodnutie o type retazca podla uvodnych uvodzoviek
 static int scan_string(Token *token) {
     int c2 = get_char();
     if (c2 == '"') {
         int c3 = get_char();
         if (c3 == '"') return scan_multiline_string(token);
         if (c3 != EOF) ungetc(c3, source_file);
+        // Prazdny retazec ""
         token->type = TOKEN_TYPE_STRING;
         token->attribute.string = (char *)calloc(1, 1);
         return token->attribute.string ? SCANNER_TOKEN_OK : ERROR_INTERNAL;
@@ -368,6 +399,7 @@ static int scan_string(Token *token) {
     return scan_singleline_string(token);
 }
 
+// Nacitanie identifikatora, klucoveho slova alebo samostatneho podtrzitka '_'
 static int scan_identifier_or_keyword(Token *token, int first_char) {
     Buffer buf;
     if (!buf_init(&buf)) return ERROR_INTERNAL;
@@ -381,11 +413,13 @@ static int scan_identifier_or_keyword(Token *token, int first_char) {
             break;
         }
     }
+    // Samostatne podtrzitko '_'
     if (strcmp(buf.data, "_") == 0) {
         buf_free(&buf);
         token->type = TOKEN_TYPE_UNDERSCORE;
         return SCANNER_TOKEN_OK;
     }
+    // Porovnanie s klucovymi slovami
     for (size_t i = 0; i < NUM_KEYWORDS; i++) {
         if (strcmp(buf.data, KEYWORDS[i].name) == 0) {
             token->type = TOKEN_TYPE_KEYWORD;
@@ -394,11 +428,13 @@ static int scan_identifier_or_keyword(Token *token, int first_char) {
             return SCANNER_TOKEN_OK;
         }
     }
+    // Identifikator
     token->type = TOKEN_TYPE_IDENTIFIER;
     token->attribute.string = buf.data;
     return SCANNER_TOKEN_OK;
 }
 
+// Spracovanie anotacie @main
 static int scan_annotation_main(Token *token) {
     char buf[5] = {0};
     for (int i = 0; i < 4; i++) {
@@ -415,6 +451,7 @@ static int scan_annotation_main(Token *token) {
     return emit_token(token, TOKEN_TYPE_MAIN);
 }
 
+// Pomocna funkcia pre jedno- a dvojznakove operatory (=, ==, !=, <, <=, >, >=)
 static int emit_match_or_single(Token *token, char expected, TokenType matched, TokenType single) {
     int next = get_char();
     if (next == expected) return emit_token(token, matched);
@@ -422,10 +459,12 @@ static int emit_match_or_single(Token *token, char expected, TokenType matched, 
     return (single == (TokenType)-1) ? SCANNER_ERROR_LEX : emit_token(token, single);
 }
 
+// Hlavna funkcia pre nacitanie dalsieho tokenu zo zdrojoveho suboru
 int get_token(Token *token) {
     if (!token || !source_file) return ERROR_INTERNAL;
     token->attribute.string = NULL;
 
+    // 1. Vratenie tokenu zo zasobnika lookaheadu
     if (unget_top >= 0) {
         *token = unget_buf[unget_top--];
         if (token->type == TOKEN_TYPE_LEFT_PAREN) paren_depth++;
@@ -433,16 +472,18 @@ int get_token(Token *token) {
         return SCANNER_TOKEN_OK;
     }
 
+    // 2. Emitovanie cakajucich DEDENTov pri viacnasobnom skoku spat
     if (pending_dedents > 0) {
         pending_dedents--;
         token->type = TOKEN_TYPE_DEDENT;
         return SCANNER_TOKEN_OK;
     }
 
+    // 3. Koniec suboru
     if (eof_reached) return handle_eof(token);
 
     while (1) {
-        // Kontrola odsadenia na zaÄiatku novÃ©ho fyzickÃ©ho riadku
+        // Kontrola odsadenia na zaciatku noveho fyzickeho riadku
         while (is_at_line_start) {
             int spaces = 0;
             bool tab_found = false;
@@ -450,10 +491,11 @@ int get_token(Token *token) {
             int res = skip_to_next_char(&c, &spaces, &tab_found);
             if (res != SCANNER_TOKEN_OK) return res;
 
-            if (c == '\n') continue;
+            if (c == '\n') continue;                    // Prazdny riadok
             if (c == EOF) return handle_eof(token);
-            if (tab_found) return SCANNER_ERROR_LEX;
+            if (tab_found) return SCANNER_ERROR_LEX;    // Tabulator na zaciatku riadku
 
+            // V zatvorkach: pokracovaci riadok musi byt viac odsadeny nez logicky riadok
             if (paren_depth > 0) {
                 if (c == ')' ? spaces < logical_line_indent : spaces <= logical_line_indent) {
                     return SCANNER_ERROR_LEX;
@@ -468,18 +510,20 @@ int get_token(Token *token) {
             is_at_line_start = false;
             ungetc(c, source_file);
 
+            // Zvysenie urovne odsadenia (INDENT)
             if (spaces > current_indent) {
                 if (indent_level + 1 >= MAX_INDENT_LEVELS) return ERROR_INTERNAL;
                 indent_stack[++indent_level] = spaces;
                 token->type = TOKEN_TYPE_INDENT;
                 return SCANNER_TOKEN_OK;
             }
+            // Znizenie urovne odsadenia (DEDENT)
             if (spaces < current_indent) {
                 int target = -1;
                 for (int i = indent_level - 1; i >= 0; i--) {
                     if (indent_stack[i] == spaces) { target = i; break; }
                 }
-                if (target == -1) return SCANNER_ERROR_LEX;
+                if (target == -1) return SCANNER_ERROR_LEX; // Nezarovnane odsadenie
                 pending_dedents = (indent_level - target) - 1;
                 indent_level = target;
                 token->type = TOKEN_TYPE_DEDENT;
@@ -488,11 +532,12 @@ int get_token(Token *token) {
             break;
         }
 
-        // ÄŒÃtanie tokenu na logickom riadku
+        // Citanie tokenu na logickom riadku
         int c;
         int res = skip_to_next_char(&c, NULL, NULL);
         if (res != SCANNER_TOKEN_OK) return res;
 
+        // Koniec logickeho riadku (EOL)
         if (c == '\n') {
             is_at_line_start = true;
             if (paren_depth > 0 || !logical_line_has_tokens) continue;
@@ -504,6 +549,7 @@ int get_token(Token *token) {
         if (c == EOF) return handle_eof(token);
         if (c == '/') return emit_token(token, TOKEN_TYPE_DIV);
 
+        // Rozpoznanie tokenov podla prveho znaku
         switch (c) {
             case '(': paren_depth++; return emit_token(token, TOKEN_TYPE_LEFT_PAREN);
             case ')': if (paren_depth > 0) paren_depth--; return emit_token(token, TOKEN_TYPE_RIGHT_PAREN);

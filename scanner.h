@@ -2,8 +2,7 @@
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
  *
  * @file scanner.h
- * @brief Scanner interface for IFJ26
- *
+ * @brief Rozhranie lexikalneho analyzatora pre IFJ26.
  */
 
 #ifndef _SCANNER_H
@@ -14,7 +13,7 @@
 #include <stdint.h>
 
 /**
- * @enum Reserved keywords for IFJ26 Base specification
+ * @enum Rezervovane klucove slova pre IFJ26
  */
 typedef enum {
     KEYWORD_DEF,        // def
@@ -34,33 +33,33 @@ typedef enum {
 } Keyword;
 
 /**
- * @enum Type of token for IFJ26 Base specification.
+ * @enum Typ tokenu pre IFJ26.
  */
 typedef enum {
-    TOKEN_TYPE_EOF,             // End of file
-    TOKEN_TYPE_EOL,             // End of logical line
-    TOKEN_TYPE_INDENT,          // Indentation increase (block start)
-    TOKEN_TYPE_DEDENT,          // Indentation decrease (block end)
-    TOKEN_TYPE_EMPTY,           // Empty / uninitialized
+    TOKEN_TYPE_EOF,             // Koniec suboru
+    TOKEN_TYPE_EOL,             // Koniec logickeho riadku
+    TOKEN_TYPE_INDENT,          // Zvysenie urovne odsadenia (zaciatok bloku)
+    TOKEN_TYPE_DEDENT,          // Znizenie urovne odsadenia (koniec bloku)
+    TOKEN_TYPE_EMPTY,           // Prazdny / neinicializovany
 
-    // Identifiers and literals
-    TOKEN_TYPE_IDENTIFIER,      // Identifier (foo, _bar, x1)
-    TOKEN_TYPE_KEYWORD,         // Keyword (from Keyword enum)
-    TOKEN_TYPE_UNDERSCORE,      // Wildcard identifier '_'
-    TOKEN_TYPE_INT_NUMBER,      // Integer literal (123, 1_000_000)
-    TOKEN_TYPE_DOUBLE_NUMBER,   // Double literal (12.34, 1.2e-3, .5, 12e3, 1.5d)
-    TOKEN_TYPE_STRING,          // String literal ("..." or """...""")
+    // Identifikatory a literaly
+    TOKEN_TYPE_IDENTIFIER,      // Identifikator (foo, _bar, x1)
+    TOKEN_TYPE_KEYWORD,         // Klucove slovo (z enum Keyword)
+    TOKEN_TYPE_UNDERSCORE,      // Samostatne podtrzitko '_'
+    TOKEN_TYPE_INT_NUMBER,      // Celociselny literal (123, 1_000_000)
+    TOKEN_TYPE_DOUBLE_NUMBER,   // Desatinny literal (12.34, 1.2e-3, .5, 12e3, 1.5d)
+    TOKEN_TYPE_STRING,          // Retazcovy literal ("..." alebo """...""")
 
-    // Annotation
-    TOKEN_TYPE_MAIN,            // @main annotation
+    // Anotacia
+    TOKEN_TYPE_MAIN,            // Anotacia @main
 
-    // Operators
+    // Operatory
     TOKEN_TYPE_PLUS,            // +
     TOKEN_TYPE_MINUS,           // -
     TOKEN_TYPE_MUL,             // *
     TOKEN_TYPE_DIV,             // /
 
-    // Comparison operators
+    // Porovnavacie operatory
     TOKEN_TYPE_EQ,              // ==
     TOKEN_TYPE_NEQ,             // !=
     TOKEN_TYPE_LT,              // <
@@ -68,10 +67,10 @@ typedef enum {
     TOKEN_TYPE_GT,              // >
     TOKEN_TYPE_GEQ,             // >=
 
-    // Assignment
+    // Priradenie
     TOKEN_TYPE_ASSIGN,          // =
 
-    // Delimiters & punctuation
+    // Oddelovace a interpunkcia
     TOKEN_TYPE_LEFT_PAREN,      // (
     TOKEN_TYPE_RIGHT_PAREN,     // )
     TOKEN_TYPE_COMMA,           // ,
@@ -79,7 +78,7 @@ typedef enum {
     TOKEN_TYPE_COLON,           // :
     TOKEN_TYPE_SEMICOLON,       // ;
 
-    // Compatibility aliases
+    // Aliasy pre kompatibilitu
     TOKEN_TYPE_LEFT_BRACKET = TOKEN_TYPE_LEFT_PAREN,
     TOKEN_TYPE_RIGHT_BRACKET = TOKEN_TYPE_RIGHT_PAREN
 } TokenType;
@@ -87,53 +86,53 @@ typedef enum {
 typedef TokenType Token_type;
 
 /**
- * @union Token attribute.
+ * @union Atribut tokenu.
  */
 typedef union {
-    char *string;           // String or identifier value
-    int64_t integer;        // Integer value or indentation column
-    Keyword keyword;        // Keyword enum value
-    double decimal;         // Double value
+    char *string;           // Hodnota retazca alebo identifikatora
+    int64_t integer;        // Hodnota celeho cisla
+    Keyword keyword;        // Hodnota klucoveho slova
+    double decimal;         // Hodnota desatinneho cisla
 } Token_attribute;
 
 /**
- * @struct Token representation.
+ * @struct Reprezentacia tokenu.
  */
 typedef struct {
-    TokenType type;             // Token type
-    Token_attribute attribute;   // Token attribute
-    bool had_preceding_newline; // True if immediately preceded by a newline (for trailing comma rule)
+    TokenType type;             // Typ tokenu
+    Token_attribute attribute;   // Atribut tokenu
+    bool had_preceding_newline; // Priznak, ci tokenu predchadzal novy riadok
 } Token;
 
 /**
- * Optional: Sets source file to be scanned and resets scanner state.
- * If not called (or called with NULL), the scanner automatically reads from stdin.
- * @param f Pointer to source file (optional).
+ * Nastavi zdrojovy subor pre scanner a resetuje jeho stav.
+ * Ak nie je zavolana (alebo s NULL), scanner cita zo stdin.
+ * @param f Ukazovatel na zdrojovy subor.
  */
 void set_source_file(FILE *f);
 
 /**
- * Resets the scanner internal state.
+ * Resetuje vnutorny stav scanneru.
  */
 void reset_scanner(void);
 
 /**
- * Scans the next token from the source file.
- * @param token Pointer to output token.
- * @return SCANNER_TOKEN_OK (0) if successful, otherwise error code (1 for lexical, 2 for syntax, 99 internal).
+ * Nacita dalsi token zo zdrojoveho suboru.
+ * @param token Ukazovatel na vystupny token.
+ * @return SCANNER_TOKEN_OK (0) pri uspechu, inak chybovy kod.
  */
 int get_token(Token *token);
 
 /**
- * Frees dynamically allocated memory in a token (e.g. string).
- * @param token Pointer to token to free.
+ * Uvolni dynamicky alokovanu pamat atributu tokenu (napr. retazec).
+ * @param token Ukazovatel na token.
  */
 void free_token_attribute(Token *token);
 
 /**
- * Returns a token back to the lookahead buffer.
- * @param token Token to put back.
- * @return SCANNER_TOKEN_OK if successful, ERROR_INTERNAL on overflow.
+ * Vrati token spat do vyrovnavacej pamate lookaheadu.
+ * @param token Token na vratenie.
+ * @return SCANNER_TOKEN_OK pri uspechu, ERROR_INTERNAL pri preteceni.
  */
 int unget_token(Token token);
 
