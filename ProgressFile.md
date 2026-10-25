@@ -84,7 +84,7 @@ Posledná aktualizácia: 25. 10. 2026
 - [ ] Doplniť regresné testy pre hraničné prípady čísel, komentárov,
   odsadenia a konca súboru.
 
-## 4. Syntaktická analýza / parser
+## 4. Syntaktická analýza / parser (Dominik)
 
 - [~] Základný rekurzívny zostup je implementovaný.
 - [~] Spracovanie programu, importov, funkcií a anotácie `@main`.
@@ -102,7 +102,7 @@ Posledná aktualizácia: 25. 10. 2026
 - [ ] Doplniť detekciu chýb na konci bloku, chýbajúcich častí a nadbytočných tokenov.
 - [ ] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi.
 
-## 5. Sémantická analýza
+## 5. Sémantická analýza (Dominik)
 
 - [~] Dátové štruktúry tabuľky symbolov už obsahujú typy, parametre,
   inicializáciu, konštanty a príznaky definície funkcie.
@@ -118,7 +118,7 @@ Posledná aktualizácia: 25. 10. 2026
 - [ ] Doplniť testy všetkých sémantických chybových kódov `3`, `4`, `5`, `6`,
   `7` a `10`.
 
-## 6. Generovanie cieľového kódu IFJcode26
+## 6. Generovanie cieľového kódu IFJcode26 (Jakub)
 
 - [ ] Navrhnúť rozhranie a dátové štruktúry generátora.
 - [ ] Implementovať výpis hlavičky a základných inštrukcií IFJcode26.
