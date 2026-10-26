@@ -12,6 +12,7 @@
 #include "scanner.h"
 #include "error.h"
 #include "symtable.h"
+#include "utils.h"
 
 // Aktualny nacitany token (lookahead)
 static Token current_tok;
@@ -99,32 +100,81 @@ static int parse_simple_expr(void) {
 
 // Deklaracia a definicia premennej: val x [: Type] = expr  alebo  var x [: Type] = expr
 static int parse_var_def(void) {
+    bool is_constant = check_kw(KEYWORD_VAL); // zistime ci ide o val (true) alebo var (false)
     int res = next_token(); // preskocime 'val' alebo 'var'
     if (res != SCANNER_TOKEN_OK) return res;
 
     if (!check(TOKEN_TYPE_IDENTIFIER)) return ERROR_SYNTAX;
+    
+    // ulozime nazov premennej lebo next_var ho prepise
+    char *var_name = str_dup(current_tok.attribute.string);
+    if (!var_name) return ERROR_INTERNAL;
+
+    // sematicka kontrola - redefinicia premennej v aktualnom scope
+    if(symtable_find_var_current_scope(symtab, var_name) != NULL) {
+        free(var_name);
+        return ERROR_SEM_REDEF;
+    }
+
     res = next_token();
-    if (res != SCANNER_TOKEN_OK) return res;
-
-    // Volitelna specifikacia typu: ": Type"
-    if (check(TOKEN_TYPE_COLON)) {
+    if (res != SCANNER_TOKEN_OK) 
+    {
+        free(var_name);
+        return res;
+    }
+    
+    // spracovanie volitelneho typu (este sa len zistuje)
+    DataType var_type = TYPE_UNDEF;
+    if(check(TOKEN_TYPE_COLON)) 
+    {
         res = next_token();
-        if (res != SCANNER_TOKEN_OK) return res;
+        if (res != SCANNER_TOKEN_OK) 
+        {
+            free(var_name);
+            return res;
+        }
 
-        if (check_kw(KEYWORD_INT) || check_kw(KEYWORD_DOUBLE) || check_kw(KEYWORD_STRING)) {
-            res = next_token();
-            if (res != SCANNER_TOKEN_OK) return res;
-        } else {
+        if(check_kw(KEYWORD_INT)) var_type = TYPE_INT;
+        else if(check_kw(KEYWORD_DOUBLE)) var_type = TYPE_DOUBLE;
+        else if(check_kw(KEYWORD_STRING)) var_type = TYPE_STRING;
+        else if(check_kw(KEYWORD_UNIT)) var_type = TYPE_UNIT;
+        else 
+        {
+            free(var_name);
             return ERROR_SYNTAX;
+        }
+
+        res = next_token();
+        if(res != SCANNER_TOKEN_OK) 
+        {
+            free(var_name);
+            return res;
         }
     }
 
     res = expect(TOKEN_TYPE_ASSIGN);
-    if (res != SCANNER_TOKEN_OK) return res;
+    if (res != SCANNER_TOKEN_OK) 
+    {
+        free(var_name);
+        return res;
+    }
 
+    // zjednodusene spracovanie vyrazu
     res = parse_simple_expr();
-    if (res != SCANNER_TOKEN_OK) return res;
+    if (res != SCANNER_TOKEN_OK) 
+    {
+        free(var_name);
+        return res;
+    }
 
+    // pridanie do tabulky symbolov
+    if(symtable_add_var(symtab, var_name, var_type, is_constant, true) == NULL) 
+    {
+        free(var_name);
+        return ERROR_INTERNAL;
+    }
+
+    free(var_name); // symtable urobilo vlastnu kopiu, toto teda mozeme uvolnit
     return expect(TOKEN_TYPE_EOL);
 }
 

@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pedantic -std=c99 -I.
 
-all: test
+all: ifj26
 
 utils.o: utils.c utils.h
 	$(CC) $(CFLAGS) -c utils.c -o utils.o
@@ -41,7 +41,11 @@ test_symtable: utils.o hashtable.o symtable.o tests/test_symtable.c
 
 test: test_scanner test_ht test_symtable
 
+check: test
+	
+build-check: all check
+
 clean:
 	rm -f *.o ifj26 test_runner test_scanner_runner test_ht_runner test_symtable_runner
 
-.PHONY: all test test_scanner test_ht test_symtable clean
+.PHONY: all test test_scanner test_ht test_symtable check build-check clean
