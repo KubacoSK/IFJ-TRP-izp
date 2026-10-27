@@ -55,47 +55,103 @@ static int expect_kw(Keyword kw) {
 // Prototypy pravidiel rekurzivneho zostupu
 static int parse_function(bool is_main);
 static int parse_params(Param *params, size_t *param_count);
-static int parse_block(void);
+static int parse_block(Param *params, size_t param_count);
 static int parse_statement(void);
 static int parse_var_def(void);
 static int parse_id_statement(void);
 static int parse_if(void);
 static int parse_while(void);
 static int parse_return(void);
-static int parse_simple_expr(void);
+static int parse_term(DataType *out_type);
 
 // Spracovanie jednoducheho vyrazu (literal, premenna alebo volanie funkcie)
-static int parse_simple_expr(void) {
-    if (check(TOKEN_TYPE_INT_NUMBER) || check(TOKEN_TYPE_DOUBLE_NUMBER) || check(TOKEN_TYPE_STRING)) {
+static int parse_term(DataType *out_type) {
+    // Literaly
+    if(check(TOKEN_TYPE_INT_NUMBER)) {
+        *out_type = TYPE_INT;
         return next_token();
     }
-    if (check(TOKEN_TYPE_IDENTIFIER)) {
-        int res = next_token();
+    if(check(TOKEN_TYPE_DOUBLE_NUMBER)) {
+        *out_type = TYPE_DOUBLE;
+        return next_token();
+    }
+    if(check(TOKEN_TYPE_STRING)) {
+        *out_type = TYPE_STRING;
+        return next_token();
+    }
+    // prazdne zatvorky pre Unit ()
+    if(check(TOKEN_TYPE_LEFT_PAREN)) {
+        int res = next_token(); // (
         if (res != SCANNER_TOKEN_OK) return res;
 
-        // Volanie funkcie v ramci vyrazu: id(arg1, arg2)
-        if (check(TOKEN_TYPE_LEFT_PAREN)) {
-            res = next_token();
-            if (res != SCANNER_TOKEN_OK) return res;
+        if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
+            return ERROR_SYNTAX;
+        }
+        *out_type = TYPE_UNIT;
+        return next_token(); // )
+    }
+    
+    // Identifikator (premmena alebo funkcia)
+    if(check(TOKEN_TYPE_IDENTIFIER)) {
+        char *id_name = str_dup(current_tok.attribute.string);
+        int res = next_token();
+        if(res != SCANNER_TOKEN_OK) {
+            free(id_name);
+            return res;
+        }
 
+        // volanie funkcie?
+        if(check(TOKEN_TYPE_LEFT_PAREN)) {
+            Symbol *func = symtable_find_func(symtab, id_name);
+            if(!func) {
+                free(id_name);
+                return ERROR_SEM_UNDEF; // Chyba 3
+            }
+
+            res = next_token(); // (
+            if (res != SCANNER_TOKEN_OK) {
+                free(id_name);
+                return res;
+            }
+            // docasne preskocenie argumentov (potom treba pridat ich kontrolu)
             if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
                 while (1) {
-                    res = parse_simple_expr();
-                    if (res != SCANNER_TOKEN_OK) return res;
+                    DataType arg_type;
+                    res = parse_term(&arg_type);
+                    if(res != SCANNER_TOKEN_OK) {
+                        free(id_name);
+                        return res;
+                    }
 
-                    if (check(TOKEN_TYPE_COMMA)) {
+                    if(check(TOKEN_TYPE_COMMA)) {
                         res = next_token();
-                        if (res != SCANNER_TOKEN_OK) return res;
+                        if(res != SCANNER_TOKEN_OK) {
+                            free(id_name);
+                            return res;
+                        }
                         continue;
                     }
                     break;
                 }
             }
-            return expect(TOKEN_TYPE_RIGHT_PAREN);
-        }
-        return SCANNER_TOKEN_OK;
+        res = expect(TOKEN_TYPE_RIGHT_PAREN);
+        *out_type = func->data.func.return_type;
+        free(id_name);
+        return res;
     }
-    return ERROR_SYNTAX;
+    // premenna?
+    else {
+        Symbol *var = symtable_find_var(symtab, id_name);
+        if(!var) {
+            free(id_name);
+            return ERROR_SEM_UNDEF; // Chyba 3
+        }
+        *out_type = var->data.var.type;
+        free(id_name);
+        return SCANNER_TOKEN_OK;
+        }
+    }   
+return ERROR_SYNTAX;
 }
 
 // Deklaracia a definicia premennej: val x [: Type] = expr  alebo  var x [: Type] = expr
@@ -155,7 +211,9 @@ static int parse_var_def(void) {
     }
 
     // zjednodusene spracovanie vyrazu
-    res = parse_simple_expr();
+    DataType expr_type;
+    res = parse_term(&expr_type);
+
     if (res != SCANNER_TOKEN_OK) {
         free(var_name);
         return res;
@@ -181,7 +239,8 @@ static int parse_id_statement(void) {
         res = next_token();
         if (res != SCANNER_TOKEN_OK) return res;
 
-        res = parse_simple_expr();
+        DataType expr_type;
+        res = parse_term(&expr_type);
         if (res != SCANNER_TOKEN_OK) return res;
 
         return expect(TOKEN_TYPE_EOL);
@@ -194,7 +253,8 @@ static int parse_id_statement(void) {
 
         if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
             while (1) {
-                res = parse_simple_expr();
+                DataType arg_type;
+                res = parse_term(&arg_type);
                 if (res != SCANNER_TOKEN_OK) return res;
 
                 if (check(TOKEN_TYPE_COMMA)) {
@@ -220,7 +280,8 @@ static int parse_if(void) {
     int res = next_token(); // preskocime 'if'
     if (res != SCANNER_TOKEN_OK) return res;
 
-    res = parse_simple_expr();
+    DataType expr_type;
+    res = parse_term(&expr_type);
     if (res != SCANNER_TOKEN_OK) return res;
 
     res = expect_kw(KEYWORD_THEN);
@@ -229,7 +290,7 @@ static int parse_if(void) {
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
 
-    res = parse_block();
+    res = parse_block(NULL, 0);
     if (res != SCANNER_TOKEN_OK) return res;
 
     res = expect_kw(KEYWORD_ELSE);
@@ -238,7 +299,7 @@ static int parse_if(void) {
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
 
-    return parse_block();
+    return parse_block(NULL, 0);
 }
 
 // Cyklus: while expr do EOL INDENT blok DEDENT
@@ -246,7 +307,8 @@ static int parse_while(void) {
     int res = next_token(); // preskocime 'while'
     if (res != SCANNER_TOKEN_OK) return res;
 
-    res = parse_simple_expr();
+    DataType expr_type;
+    res = parse_term(&expr_type);
     if (res != SCANNER_TOKEN_OK) return res;
 
     res = expect_kw(KEYWORD_DO);
@@ -255,7 +317,7 @@ static int parse_while(void) {
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
 
-    return parse_block();
+    return parse_block(NULL, 0);
 }
 
 // Prikaz navratu: return [expr] EOL
@@ -264,7 +326,8 @@ static int parse_return(void) {
     if (res != SCANNER_TOKEN_OK) return res;
 
     if (!check(TOKEN_TYPE_EOL)) {
-        res = parse_simple_expr();
+        DataType expr_type;
+        res = parse_term(&expr_type);
         if (res != SCANNER_TOKEN_OK) return res;
     }
     return expect(TOKEN_TYPE_EOL);
@@ -291,11 +354,22 @@ static int parse_statement(void) {
 }
 
 // Spracovanie bloku prikazov ohraniceneho INDENT a DEDENT
-static int parse_block(void) {
+static int parse_block(Param *params, size_t param_count) {
     int res = expect(TOKEN_TYPE_INDENT);
     if (res != SCANNER_TOKEN_OK) return res;
 
     symtable_push_scope(symtab);
+
+    // vlozenie parametrov do lokalneho scope
+    if(params != NULL) {
+        for(size_t i = 0; i < param_count; i++) {
+            // parametre vzdy incializovane a konstantne
+            if(symtable_add_var(symtab, params[i].name, params[i].type, true, true) == NULL) {
+                symtable_pop_scope(symtab);
+                return ERROR_INTERNAL;
+            }
+        }
+    }
 
     while (!check(TOKEN_TYPE_DEDENT) && !check(TOKEN_TYPE_EOF)) {
         if (check(TOKEN_TYPE_EOL)) {
@@ -467,7 +541,7 @@ static int parse_function(bool is_main) {
     }
     
     // spracovanie tela funkcie
-    return parse_block(); // TODO precedencna analyza vyrazov, parametre lokalneho scope a nepovinny navratovy typ
+    return parse_block(temp_params, param_count); // TODO precedencna analyza vyrazov, parametre lokalneho scope a nepovinny navratovy typ
 }
 
 // Hlavny vstupny bod parsera: spracuje postupnost funkcii

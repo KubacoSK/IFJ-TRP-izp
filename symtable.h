@@ -19,7 +19,8 @@ typedef enum {
     TYPE_DOUBLE,        // Desatinne cislo (Double)
     TYPE_STRING,        // Retazec (String)
     TYPE_UNIT,          // Prazdny navratovy typ (Unit)
-    TYPE_ANY            // Zastupny typ pre lubovolnu hodnotu
+    TYPE_ANY,           // Zastupny typ pre lubovolnu hodnotu
+    TYPE_BOOL           // Pravdivostna hodnota (Boolean) len pre podmienky
 } DataType;
 
 // Druh symbolu

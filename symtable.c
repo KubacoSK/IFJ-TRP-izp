@@ -161,6 +161,7 @@ const char *datatype_to_string(DataType type) {
         case TYPE_STRING: return "String";
         case TYPE_UNIT:   return "Unit";
         case TYPE_ANY:    return "Any";
+        case TYPE_BOOL:   return "Boolean";
         case TYPE_UNDEF:
         default:          return "Undef";
     }
