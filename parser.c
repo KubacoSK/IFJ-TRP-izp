@@ -14,7 +14,47 @@
 #include "symtable.h"
 #include "utils.h"
 
-// Aktualny nacitany token (lookahead)
+#define MAX_EXPR_DEPTH 100
+
+// pomocna funkcia na ziskanie indexu pre precedencu tabulku
+// poradie podla hlavicky tabulky: + - * / < <= > >= == != ( ) $
+static int get_op_index(TokenType type) {
+    switch (type) {
+        case TOKEN_TYPE_PLUS: return 0;
+        case TOKEN_TYPE_MINUS: return 1;
+        case TOKEN_TYPE_MUL: return 2;
+        case TOKEN_TYPE_DIV: return 3;
+        case TOKEN_TYPE_LT: return 4;
+        case TOKEN_TYPE_LEQ: return 5;
+        case TOKEN_TYPE_GT: return 6;
+        case TOKEN_TYPE_GEQ: return 7;
+        case TOKEN_TYPE_EQ: return 8;
+        case TOKEN_TYPE_NEQ: return 9;
+        case TOKEN_TYPE_LEFT_PAREN: return 10;
+        case TOKEN_TYPE_RIGHT_PAREN: return 11;
+        case TOKEN_TYPE_EOL: return 12; // EOL je koniec vyrazu ($)
+        default: return -1; // iny token (napr. cislo)
+    }
+}
+
+// Precedencna tabulka, E znaci error
+static const char prec_table[13][13] = {
+    // +    -    *    /    <    <=   >    >=   ==   !=   (    )    $
+    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // +
+    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // -
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // *
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // /
+    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // <
+    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // <=
+    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // >
+    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // >=
+    {'<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '>', '>'}, // ==
+    {'<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '>', '>'}, // !=
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', 'E'}, // (
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', '>'}, // )
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', 'E', 'E'}  // $
+};
+
 static Token current_tok;
 
 // Ukazovatel na tabulku symbolov
@@ -63,9 +103,26 @@ static int parse_if(void);
 static int parse_while(void);
 static int parse_return(void);
 static int parse_term(DataType *out_type);
+static int parse_expression(DataType *out_type);
 
 // Spracovanie jednoducheho vyrazu (literal, premenna alebo volanie funkcie)
 static int parse_term(DataType *out_type) {
+
+    // Unarne operatory (+, -)
+    if (check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
+        int res = next_token();
+        if (res != SCANNER_TOKEN_OK) return res;
+        res = parse_term(out_type); // rekurzivne precitanie operandu
+        if (res != SCANNER_TOKEN_OK) return res;
+
+        // unarne operatory su povolene len pre cisla
+        if(*out_type != TYPE_INT && *out_type != TYPE_DOUBLE) {
+            return ERROR_SEM_TYPE; 
+        }
+        return SCANNER_TOKEN_OK;
+    }
+
+
     // Literaly
     if(check(TOKEN_TYPE_INT_NUMBER)) {
         *out_type = TYPE_INT;
@@ -154,6 +211,164 @@ static int parse_term(DataType *out_type) {
 return ERROR_SYNTAX;
 }
 
+// pomocna funkcia na spracovanie redukcie (sematika)
+static int reduce_operation(TokenType op, DataType left, DataType right, DataType *result) {
+    
+    // aritmeticke operatory
+    if(op == TOKEN_TYPE_PLUS || op == TOKEN_TYPE_MINUS ||
+       op == TOKEN_TYPE_MUL || op == TOKEN_TYPE_DIV) {
+
+        // konkatenacia retazcov (iba pre +)
+        if (op == TOKEN_TYPE_PLUS && left == TYPE_STRING && right == TYPE_STRING) {
+            *result = TYPE_STRING;
+            return SCANNER_TOKEN_OK;
+        }
+
+        // Oba Int = vysledok Int
+        if (left == TYPE_INT && right == TYPE_INT) {
+            *result = TYPE_INT;
+            return SCANNER_TOKEN_OK;
+        }
+
+        // ak je aspon jeden double = vysledok double
+        if ((left == TYPE_DOUBLE || right == TYPE_DOUBLE) &&
+            (left == TYPE_INT || left == TYPE_DOUBLE) &&
+            (right == TYPE_INT || right == TYPE_DOUBLE)) {
+                *result = TYPE_DOUBLE;
+                return SCANNER_TOKEN_OK;
+            }
+
+            // vsetko ostatne chyba 6 (napr. string + int)
+            return ERROR_SEM_TYPE;
+
+       }
+
+       // relacne operatory
+       if (op == TOKEN_TYPE_LT || op == TOKEN_TYPE_LEQ || op == TOKEN_TYPE_GT ||
+           op == TOKEN_TYPE_GEQ || op == TOKEN_TYPE_EQ || op == TOKEN_TYPE_NEQ) {
+
+            bool left_num = (left == TYPE_INT || left == TYPE_DOUBLE);
+            bool right_num = (right == TYPE_INT || right == TYPE_DOUBLE);
+           
+
+           // porovnat mozeme cisla alebo 2 stringy
+           if ((left_num && right_num) || (left == TYPE_STRING && right == TYPE_STRING)) {
+                *result = TYPE_BOOL; // vysledok porovnania Boolean
+                return SCANNER_TOKEN_OK;
+           }
+
+           return ERROR_SEM_TYPE; // chyba 6
+        }
+
+    return ERROR_SYNTAX;
+}
+
+// precedencna analyza vyrazou
+static int parse_expression(DataType *out_type) {
+
+    // zasobniky
+    TokenType op_stack[MAX_EXPR_DEPTH];
+    DataType type_stack[MAX_EXPR_DEPTH];
+    int op_top = -1;
+    int type_top = -1;
+
+    // koniec vyrazu na spodok zasobnika ($)
+    op_stack[++op_top] = TOKEN_TYPE_EOL;
+
+    // priznak, ci ocakavame operand
+    bool expect_opd = true;
+    
+    while(1) {
+
+        // zistime ci je + alebo - unarne
+        bool is_unary = (current_tok.type == TOKEN_TYPE_PLUS ||
+                         current_tok.type == TOKEN_TYPE_MINUS) && expect_opd;
+
+        // ak na vstupe je operand (cislo, premenna) alebo unary operator
+        if (current_tok.type == TOKEN_TYPE_INT_NUMBER ||
+           current_tok.type == TOKEN_TYPE_DOUBLE_NUMBER ||
+           current_tok.type == TOKEN_TYPE_STRING ||
+           current_tok.type == TOKEN_TYPE_IDENTIFIER || is_unary) {
+
+            DataType t;
+            int res = parse_term(&t); // nacitanie operandu
+            if (res != SCANNER_TOKEN_OK) return res;
+
+            type_stack[++type_top] = t;
+            expect_opd = false; // po operande uz ocakavame operator
+            continue; 
+        }
+
+        // ak je na vstupe operator (alebo koniec)
+        TokenType curr_op = current_tok.type;
+
+        // zistime co je na vrchu zasobnika
+        TokenType top_op = op_stack[op_top];
+
+        // ziskame indexy pre precedencnu tabulku
+        int top_index = get_op_index(top_op);
+        int curr_index = get_op_index(curr_op);
+
+        // ak je nieco, co neni v tabulke, vezmeme to ako koniec vyrazu
+        if (curr_index == -1 ) curr_index = 12; // EOL
+
+        // ak sme na konci vyrazu ($), skoncime
+        if(top_op == TOKEN_TYPE_EOL && curr_index == 12) {
+            break;
+        }
+
+        char action = prec_table[top_index][curr_index];
+
+        if (action == '<') {
+            // SHIFT: posunieme operator na zasobnik a precitame dalsi token
+            op_stack[++op_top] = curr_op;
+            expect_opd = true; // po operatori ocakavame operand
+            int res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+        }
+        else if (action == '=') {
+            // MATCH: zahodine '(' zo zasobnika a precitame ')'
+            op_top--;
+
+            // osetrenie prazdnych zatvoriek
+            if(type_top < op_top) {
+                type_stack[++type_top] = TYPE_UNIT;
+            }
+
+            expect_opd = false; // po uzatvoreni zatvorky mame hotovu hodnotu
+            int res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+        }
+        else if (action == '>') {
+
+            TokenType op = op_stack[op_top--]; // zobereme operator
+            if (type_top < 1) return ERROR_SYNTAX; // chyba, malo operandov
+
+            DataType right = type_stack[type_top--]; 
+            DataType left = type_stack[type_top--];
+            DataType result;
+            
+            // sematicka kontrola pre operator
+            int res = reduce_operation(op, left, right, &result);
+            if (res != SCANNER_TOKEN_OK) return res;
+
+            type_stack[++type_top] = result; // vysledok dame spat na zasobnik
+            expect_opd = false; // vysledok redukcie je operand
+        }
+        else {
+            // chyba v precedencnej tabulke
+            return ERROR_SYNTAX;
+        }
+    }
+
+    // prave jeden vysledny typ na zasobniku by mal ostat
+    if (type_top != 0) return ERROR_SYNTAX;
+    
+    *out_type = type_stack[0];
+    return SCANNER_TOKEN_OK;
+
+}
+    
 // Deklaracia a definicia premennej: val x [: Type] = expr  alebo  var x [: Type] = expr
 static int parse_var_def(void) {
     bool is_constant = check_kw(KEYWORD_VAL); // zistime ci ide o val (true) alebo var (false)
@@ -210,13 +425,24 @@ static int parse_var_def(void) {
         return res;
     }
 
-    // zjednodusene spracovanie vyrazu
+    // spracovanie vyrazu pomocou precedencnej analyzy
     DataType expr_type;
-    res = parse_term(&expr_type);
-
+    res = parse_expression(&expr_type);
     if (res != SCANNER_TOKEN_OK) {
         free(var_name);
         return res;
+    }
+
+    // kontrola typov
+    if (var_type != TYPE_UNDEF) {
+        //ak su rozdielne, ale ide o konverziu int na double, je to ok
+        if(var_type != expr_type && !(var_type == TYPE_DOUBLE && expr_type == TYPE_INT)) {
+            free(var_name);
+            return ERROR_SEM_TYPE; // chyba 6
+        }
+    } else {
+        // ak nebol zadany, odvodime z vyrazu
+        var_type = expr_type;
     }
 
     // pridanie do tabulky symbolov
@@ -240,8 +466,10 @@ static int parse_id_statement(void) {
         if (res != SCANNER_TOKEN_OK) return res;
 
         DataType expr_type;
-        res = parse_term(&expr_type);
+        res = parse_expression(&expr_type);
         if (res != SCANNER_TOKEN_OK) return res;
+
+        // TODO: doplnit kontrolu ci typy sedia a ci neni konstatna
 
         return expect(TOKEN_TYPE_EOL);
     }
@@ -280,9 +508,11 @@ static int parse_if(void) {
     int res = next_token(); // preskocime 'if'
     if (res != SCANNER_TOKEN_OK) return res;
 
-    DataType expr_type;
-    res = parse_term(&expr_type);
+    DataType cond_type;
+    res = parse_expression(&cond_type);
     if (res != SCANNER_TOKEN_OK) return res;
+
+    if(cond_type != TYPE_BOOL) return ERROR_SEM_TYPE;
 
     res = expect_kw(KEYWORD_THEN);
     if (res != SCANNER_TOKEN_OK) return res;
@@ -298,7 +528,7 @@ static int parse_if(void) {
 
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
-
+    
     return parse_block(NULL, 0);
 }
 
@@ -307,9 +537,11 @@ static int parse_while(void) {
     int res = next_token(); // preskocime 'while'
     if (res != SCANNER_TOKEN_OK) return res;
 
-    DataType expr_type;
-    res = parse_term(&expr_type);
+    DataType cond_type;
+    res = parse_expression(&cond_type);
     if (res != SCANNER_TOKEN_OK) return res;
+
+    if(cond_type != TYPE_BOOL) return ERROR_SEM_TYPE;
 
     res = expect_kw(KEYWORD_DO);
     if (res != SCANNER_TOKEN_OK) return res;
@@ -326,8 +558,8 @@ static int parse_return(void) {
     if (res != SCANNER_TOKEN_OK) return res;
 
     if (!check(TOKEN_TYPE_EOL)) {
-        DataType expr_type;
-        res = parse_term(&expr_type);
+        DataType ret_type;
+        res = parse_expression(&ret_type);
         if (res != SCANNER_TOKEN_OK) return res;
     }
     return expect(TOKEN_TYPE_EOL);
@@ -541,7 +773,7 @@ static int parse_function(bool is_main) {
     }
     
     // spracovanie tela funkcie
-    return parse_block(temp_params, param_count); // TODO precedencna analyza vyrazov, parametre lokalneho scope a nepovinny navratovy typ
+    return parse_block(temp_params, param_count); // TODO: nepovinny navratovy typ
 }
 
 // Hlavny vstupny bod parsera: spracuje postupnost funkcii

@@ -24,11 +24,11 @@ Posledná aktualizácia: 25. 10. 2026
 
 ## 1. Príprava a architektúra
 
-- [ ] Vytvorenie / nastavenie spoločného Git repozitára.
-- [ ] Dohodnutie pravidiel práce: Conventional Commits, pull requesty a code review.
+- [x] Vytvorenie / nastavenie spoločného Git repozitára.
+- [x] Dohodnutie pravidiel práce: Conventional Commits, pull requesty a code review.
 - [x] Vytvorenie základného `Makefile` s cieľmi `all`, `ifj26`, `test`,
   `test_scanner`, `test_ht`, `test_symtable` a `clean`.
-- [ ] Doplniť samostatné ciele `check` alebo `build-check`.
+- [x] Doplniť samostatné ciele `check` alebo `build-check`.
 - [ ] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory.
 - [x] Navrhnutie základných dátových štruktúr tokenov v `scanner.h`.
 - [x] Navrhnutie dátových štruktúr hash tabuľky a tabuľky symbolov.
@@ -86,36 +86,36 @@ Posledná aktualizácia: 25. 10. 2026
 
 ## 4. Syntaktická analýza / parser (Dominik)
 
-- [~] Základný rekurzívny zostup je implementovaný.
-- [~] Spracovanie programu, importov, funkcií a anotácie `@main`.
-- [~] Spracovanie parametrov a návratových typov funkcií.
-- [~] Spracovanie blokov cez `INDENT` / `DEDENT`.
-- [~] Spracovanie deklarácií `val` a `var`, priradení a jednoduchých volaní.
-- [~] Spracovanie `if ... then ... else`, `while ... do` a `return`.
-- [~] Jednoduché výrazy podporujú literály, identifikátory a volania funkcií.
+- [x] Základný rekurzívny zostup je implementovaný.
+- [x] Spracovanie programu, importov, funkcií a anotácie `@main`.
+- [x] Spracovanie parametrov a návratových typov funkcií.
+- [x] Spracovanie blokov cez `INDENT` / `DEDENT`.
+- [x] Spracovanie deklarácií `val` a `var`, priradení a jednoduchých volaní.
+- [x] Spracovanie `if ... then ... else`, `while ... do` a `return`.
+- [x] Jednoduché výrazy podporujú literály, identifikátory a volania funkcií.
 - [ ] Navrhnúť a skontrolovať kompletnú LL gramatiku podľa zadania.
 - [ ] Doplniť pravidlá pre všetky povolené typy príkazov a návratov.
-- [ ] Implementovať výrazy s operátormi `+`, `-`, `*`, `/` a porovnaniami.
-- [ ] Implementovať precedenčnú analýzu alebo ekvivalentné pravidlá priorít.
-- [ ] Doplniť zátvorkovanie, unárne operátory a kombinované výrazy podľa zadania.
-- [ ] Správne rozlíšiť kontext `@main` a bežných definícií funkcií.
-- [ ] Doplniť detekciu chýb na konci bloku, chýbajúcich častí a nadbytočných tokenov.
-- [ ] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi.
+- [x] Implementovať výrazy s operátormi `+`, `-`, `*`, `/` a porovnaniami.
+- [x] Implementovať precedenčnú analýzu alebo ekvivalentné pravidlá priorít.
+- [x] Doplniť zátvorkovanie, unárne operátory a kombinované výrazy podľa zadania.
+- [x] Správne rozlíšiť kontext `@main` a bežných definícií funkcií.
+- [~] Doplniť detekciu chýb na konci bloku, chýbajúcich častí a nadbytočných tokenov.
+- [~] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi.
 
 ## 5. Sémantická analýza (Dominik)
 
 - [~] Dátové štruktúry tabuľky symbolov už obsahujú typy, parametre,
   inicializáciu, konštanty a príznaky definície funkcie.
-- [ ] Prepojiť pridávanie funkcií a premenných z parsera do tabuľky symbolov.
-- [ ] Kontrolovať definovanie premennej/funkcie pred použitím.
-- [ ] Kontrolovať redefiníciu premennej alebo funkcie.
+- [x] Prepojiť pridávanie funkcií a premenných z parsera do tabuľky symbolov.
+- [x] Kontrolovať definovanie premennej/funkcie pred použitím.
+- [x] Kontrolovať redefiníciu premennej alebo funkcie.
 - [ ] Kontrolovať inicializáciu premennej pred čítaním.
-- [ ] Implementovať typovú kontrolu výrazov a priradení.
+- [~] Implementovať typovú kontrolu výrazov a priradení.
 - [ ] Kontrolovať zápis do `val` a ďalších nemenných identifikátorov.
 - [ ] Kontrolovať počet a typy argumentov pri volaní funkcie.
 - [ ] Kontrolovať návratový typ a platnosť príkazu `return`.
-- [ ] Overiť povinnosť a jedinečnosť `@main`.
-- [ ] Doplniť testy všetkých sémantických chybových kódov `3`, `4`, `5`, `6`,
+- [~] Overiť povinnosť a jedinečnosť `@main`.
+- [~] Doplniť testy všetkých sémantických chybových kódov `3`, `4`, `5`, `6`,
   `7` a `10`.
 
 ## 6. Generovanie cieľového kódu IFJcode26 (Jakub)
