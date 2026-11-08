@@ -166,3 +166,33 @@ const char *datatype_to_string(DataType type) {
         default:          return "Undef";
     }
 }
+
+// Registracia vstavanych funkcii do tabulky symbolov
+void symtable_add_builtins(Symtable *st) {
+    if (!st) return;
+
+    Param p_print[] = {{"value", TYPE_ANY}};
+    symtable_add_func(st, "print", TYPE_UNIT, 1, p_print, true, true);
+
+    symtable_add_func(st, "readLine", TYPE_STRING, 0, NULL, true, true);
+    symtable_add_func(st, "readInt", TYPE_INT, 0, NULL, true, true);
+    symtable_add_func(st, "readDouble", TYPE_DOUBLE, 0, NULL, true, true);
+
+    Param p_toStr[] = {{"value", TYPE_ANY}};
+    symtable_add_func(st, "toStr", TYPE_STRING, 1, p_toStr, true, true);
+
+    Param p_toInt[] = {{"value", TYPE_DOUBLE}};
+    symtable_add_func(st, "toInt", TYPE_INT, 1, p_toInt, true, true);
+
+    Param p_strLength[] = {{"value", TYPE_STRING}};
+    symtable_add_func(st, "strLength", TYPE_INT, 1, p_strLength, true, true);
+
+    Param p_subStr[] = {{"value", TYPE_STRING}, {"start", TYPE_INT}, {"end", TYPE_INT}};
+    symtable_add_func(st, "subStr", TYPE_STRING, 3, p_subStr, true, true);
+
+    Param p_ord[] = {{"value", TYPE_STRING}, {"index", TYPE_INT}};
+    symtable_add_func(st, "ord", TYPE_INT, 2, p_ord, true, true);
+
+    Param p_chr[] = {{"value", TYPE_INT}};
+    symtable_add_func(st, "chr", TYPE_STRING, 1, p_chr, true, true);
+}

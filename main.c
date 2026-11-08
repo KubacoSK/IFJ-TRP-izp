@@ -27,6 +27,9 @@ int main(void) {
     Symtable st;
     symtable_init(&st);
 
+    // Pridanie vstavanych funkcii
+    symtable_add_builtins(&st);
+
     // prvy priechod - zber hlaviciek funkcii
     set_source_file(temp_file);
     int result = parse_headers(&st);

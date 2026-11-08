@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "parser.h"
 #include "scanner.h"
 #include "error.h"
@@ -195,7 +196,7 @@ static int parse_term(DataType *out_type) {
 
                     // kontrola typu argumentu
                     DataType expected_type = func->data.func.params[arg_index_count].type;
-                    if(expected_type != arg_type) {
+                    if(expected_type != arg_type && expected_type != TYPE_ANY) {
                         // povolime konverziu Int -> Double
                         if(!(expected_type == TYPE_DOUBLE && arg_type == TYPE_INT)) {
                             free(id_name);
@@ -479,6 +480,12 @@ static int parse_var_def(void) {
         var_type = expr_type;
     }
 
+    // zakaz ukladanie bool do premennej 
+    if(var_type == TYPE_BOOL) {
+        free(var_name);
+        return ERROR_SEM_TYPE; // chyba 6
+    }
+
     // pridanie do tabulky symbolov
     if(symtable_add_var(symtab, var_name, var_type, is_constant, true) == NULL) {
         free(var_name);
@@ -578,7 +585,7 @@ static int parse_id_statement(void) {
                 }
 
                 DataType expected_type = func->data.func.params[arg_index_count].type;
-                if(expected_type != arg_type) {
+                if(expected_type != arg_type && expected_type != TYPE_ANY) {
                     if(!(expected_type == TYPE_DOUBLE && arg_type == TYPE_INT)) {
                         free(id_name);
                         return ERROR_SEM_PARAM; 
@@ -729,6 +736,7 @@ static int parse_block(Param *params, size_t param_count) {
             }
         }
     }
+    bool has_statements = false;
 
     while (!check(TOKEN_TYPE_DEDENT) && !check(TOKEN_TYPE_EOF)) {
         if (check(TOKEN_TYPE_EOL)) {
@@ -737,8 +745,19 @@ static int parse_block(Param *params, size_t param_count) {
             continue;
         }
 
+        has_statements = true;
         res = parse_statement();
         if (res != SCANNER_TOKEN_OK) goto cleanup;
+
+        // spracovanie strednika
+        if (check(TOKEN_TYPE_SEMICOLON)) {
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) goto cleanup;
+        }
+    }
+    if(!has_statements) {
+        symtable_pop_scope(symtab);
+        return ERROR_SYNTAX;
     }
 
     res = expect(TOKEN_TYPE_DEDENT);
@@ -845,29 +864,30 @@ static int parse_function(bool is_main) {
         return res;
     }
 
-    res = expect(TOKEN_TYPE_COLON);
-    if (res != SCANNER_TOKEN_OK) {
-        free(func_name);
-        return res; 
-    }
-
-    // ulozenie navratoveho
+    // ulozenie navratoveho type (nepovinny)
     DataType return_type = TYPE_UNDEF;
-    if(check_kw(KEYWORD_INT)) return_type = TYPE_INT;
-    else if(check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
-    else if(check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
-    else if(check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
-    else {
-        free(func_name);
-        return ERROR_SYNTAX;
-    }
+    if (check(TOKEN_TYPE_COLON)) {
+        res = next_token(); // preskocime ':'
+        if (res != SCANNER_TOKEN_OK) {
+            free(func_name);
+            return res; 
+        }
 
-    res = next_token();
-    if (res != SCANNER_TOKEN_OK) {
-        free(func_name);
-        return res;
-    }
+        if(check_kw(KEYWORD_INT)) return_type = TYPE_INT;
+        else if(check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
+        else if(check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
+        else if(check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
+        else {
+            free(func_name);
+            return ERROR_SYNTAX;
+        }
 
+        res = next_token();
+        if (res != SCANNER_TOKEN_OK) {
+            free(func_name);
+            return res;
+        }
+    }
     // sematicka kontrola - @main
     if(is_main) {
         if(param_count > 0) {
@@ -886,17 +906,12 @@ static int parse_function(bool is_main) {
         return res;
     }
 
-    res = expect(TOKEN_TYPE_EOL);
-    if (res != SCANNER_TOKEN_OK) {
-        free(func_name);
-        return res;
-    }
-
     // pridanie do symtable (iba ak nie je z prveho priechodu)
     if (!is_from_first_pass) {
         Symbol *sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, true, false);
         if (!sym) {
             free(func_name);
+            for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
             return ERROR_INTERNAL;
         }    
     }
@@ -906,34 +921,89 @@ static int parse_function(bool is_main) {
     current_func_return_type = return_type;
 
     // spracovanie tela funkcie
-    int block_res = parse_block(temp_params, param_count);
-
-    // uvolnenie docasnych parametrov
-    for(size_t i = 0; i < param_count; i++) {
-        free(temp_params[i].name);
+    int block_res;
+    // ak nasleduje EOL, ide o viacriadkovu funkciu
+    if(check(TOKEN_TYPE_EOL)) {
+        res = next_token();
+        if (res != SCANNER_TOKEN_OK) {
+            for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            return res;
+        }
+        block_res = parse_block(temp_params, param_count);
     }
+
+    // inak to je jednoriadkova funkcia
+    else {
+        // vytvorime scope pre telo jednoriadkovej funkcie
+        symtable_push_scope(symtab);
+
+        // vlozenie parametrov do tohto scope
+        for(size_t i = 0 ; i < param_count; i++) {
+            if(symtable_add_var(symtab, temp_params[i].name, temp_params[i].type, true, true) == NULL) {
+                symtable_pop_scope(symtab);
+                for(size_t j = 0; j < param_count; j++) free(temp_params[j].name);
+                return ERROR_INTERNAL;
+            }
+        }
+
+        DataType expr_type;
+        res = parse_expression(&expr_type);
+        if (res != SCANNER_TOKEN_OK) {
+            symtable_pop_scope(symtab);
+            for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            return res;
+        }
+
+        // typova kontrola navratoveho typu
+        if(return_type != TYPE_UNDEF) {
+            if(return_type != expr_type && !(return_type == TYPE_DOUBLE && expr_type == TYPE_INT)) {
+                symtable_pop_scope(symtab);
+                for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                return ERROR_SEM_TYPE; // chyba 6
+            }
+        }
+
+        
+        block_res = expect(TOKEN_TYPE_EOL);
+
+        symtable_pop_scope(symtab);
+        }
+
+    
+    // uvolnenie docasnych parametrov
+    for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
 
     return block_res;
 }
 
 // Pomocna funkcia na preskocenie tela funkcie (blok)
 static int skip_block(void) {
-    // po '=' ocakavame EOL a potom INDENT
-    int res = expect(TOKEN_TYPE_EOL);
-    if (res != SCANNER_TOKEN_OK) return res;
-
-    res = expect(TOKEN_TYPE_INDENT);
-    if (res != SCANNER_TOKEN_OK) return res;
-
-    // preskakujeme tokeny, kym nenarazime na koniec bloku (DEDENT)
-    int depth = 1;
-    while (depth > 0 && !check(TOKEN_TYPE_EOF)) {
-        if (check(TOKEN_TYPE_INDENT)) depth++;
-        if (check(TOKEN_TYPE_DEDENT)) depth--;
-        res = next_token();
+    // ak nasleduje EOL, ide o viac riadkovu funkciu
+    if(check(TOKEN_TYPE_EOL)) {
+        int res = next_token(); // preskocime EOL
         if (res != SCANNER_TOKEN_OK) return res;
+
+        res = expect(TOKEN_TYPE_INDENT);
+        if (res != SCANNER_TOKEN_OK) return res;
+
+        int depth = 1;
+        while (depth > 0 && !check(TOKEN_TYPE_EOF)) {
+            if (check(TOKEN_TYPE_INDENT)) depth++;
+            else if (check(TOKEN_TYPE_DEDENT)) depth--;
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+        }
+        return SCANNER_TOKEN_OK;
     }
-    return SCANNER_TOKEN_OK;
+    
+    // ak tam nie je EOL, ide o jednoriadkovu funkciu, preskocime vsetko az do konca riadku
+    else {
+        while (!check(TOKEN_TYPE_EOL) && !check(TOKEN_TYPE_EOF)) {
+            int res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+        }
+        return expect(TOKEN_TYPE_EOL);
+    }
 }
 // Prvy priechod, zbieraju su hlavicky funkcii
 int parse_headers(Symtable *st) {
@@ -989,32 +1059,35 @@ int parse_headers(Symtable *st) {
                 free(func_name);
                 return res;
             }
-            res = expect(TOKEN_TYPE_COLON);
-            if (res != SCANNER_TOKEN_OK) {
-                free(func_name);
-                for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
-                return res;
-            }
-
+            // ulozenie navratoveho typu (nepovinny)
             DataType return_type = TYPE_UNDEF;
-            if (check_kw(KEYWORD_INT)) return_type = TYPE_INT;
-            else if (check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
-            else if (check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
-            else if (check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
-            else {
-                free(func_name);
-                return ERROR_SYNTAX;
-            }
+            if (check(TOKEN_TYPE_COLON)) {
+                res = next_token(); // preskocime ':'
+                if (res != SCANNER_TOKEN_OK) {
+                    free(func_name);
+                    for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                    return res;
+                }
 
-            res = next_token();
-            if (res != SCANNER_TOKEN_OK) {
-                free(func_name);
-                return res;
-            }
+                if (check_kw(KEYWORD_INT)) return_type = TYPE_INT;
+                else if (check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
+                else if (check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
+                else if (check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
+                else {
+                    free(func_name);
+                    return ERROR_SYNTAX;
+                }
 
+                res = next_token();
+                if (res != SCANNER_TOKEN_OK) {
+                    free(func_name);
+                    return res;
+                }
+            }
             // Ulozenie hlavicky do tabulky
             if (symtable_add_func(symtab, func_name, return_type, param_count, temp_params, false, false) == NULL) {
                 free(func_name);
+                for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
                 return ERROR_INTERNAL;
             }
 
@@ -1022,7 +1095,10 @@ int parse_headers(Symtable *st) {
             for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
 
             res = expect(TOKEN_TYPE_ASSIGN);
-            if (res != SCANNER_TOKEN_OK) return res;
+            if (res != SCANNER_TOKEN_OK) {
+                for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                return res;
+            }
 
             // Preskocenie tela funkcie
             res = skip_block();
@@ -1036,29 +1112,63 @@ int parse_headers(Symtable *st) {
 // Hlavny vstupny bod parsera: spracuje postupnost funkcii
 int parse_program(Symtable *st) {
     symtab = st;
+    int main_count = 0; // pocitadlo vyskytu @main
 
     int res = next_token();
     if (res != SCANNER_TOKEN_OK && res != TOKEN_TYPE_EOF) {
         return res;
     }
 
+    // preskocenie prazdnych riadkov na zaciatku
+    while (check(TOKEN_TYPE_EOL)) {
+        res = next_token();
+        if (res != SCANNER_TOKEN_OK) return res;
+    }
+    
+    // povinny prolog import ifj26*
+    if (!check_kw(KEYWORD_IMPORT))  return ERROR_SYNTAX; // chyba 2
+
+    res = next_token();
+    if(res != SCANNER_TOKEN_OK) return res;
+
+    // Ocakavame 'ifj26'
+    if(!check(TOKEN_TYPE_IDENTIFIER) || strcmp(current_tok.attribute.string, "ifj26") != 0) return ERROR_SYNTAX;
+
+    res = next_token();
+    if(res != SCANNER_TOKEN_OK) return res;
+
+    // ocakavame '.'
+    if(!check(TOKEN_TYPE_DOT)) return ERROR_SYNTAX;
+
+    res = next_token();
+    if(res != SCANNER_TOKEN_OK) return res;
+
+    // ocakavame '*'
+    if(!check(TOKEN_TYPE_MUL)) return ERROR_SYNTAX;
+
+    res = next_token();
+    if(res != SCANNER_TOKEN_OK) return res;
+
+    // koniec riadku za prologom
+    res = expect(TOKEN_TYPE_EOL);
+    if(res != SCANNER_TOKEN_OK) return res;
+
+    // spracovanie zvysku programu
     while (!check(TOKEN_TYPE_EOF)) {
-        if (check(TOKEN_TYPE_EOL)) {
+        if(check(TOKEN_TYPE_EOL)) {
             res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
             continue;
         }
 
+        // ak by sa vyskytol import, je to chyba
         if (check_kw(KEYWORD_IMPORT)) {
-            while (!check(TOKEN_TYPE_EOL) && !check(TOKEN_TYPE_EOF)) {
-                res = next_token();
-                if (res != SCANNER_TOKEN_OK) return res;
-            }
-            if (check(TOKEN_TYPE_EOL)) next_token();
-            continue;
+            return ERROR_SYNTAX;
         }
 
         if (check(TOKEN_TYPE_MAIN)) {
+            main_count++;
+            if(main_count > 1) return ERROR_SEM_REDEF; // Chyba 4: viacero @main
             res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
             res = parse_function(true);
@@ -1074,6 +1184,9 @@ int parse_program(Symtable *st) {
 
         return ERROR_SYNTAX;
     }
+
+    // overime ci main vobec existoval
+    if (main_count == 0) return ERROR_SEM_UNDEF; // Chyba 3: @main neexistuje
 
     free_token_attribute(&current_tok);
     return ERROR_OK;
