@@ -716,6 +716,16 @@ static int parse_statement(void) {
     if (check(TOKEN_TYPE_IDENTIFIER)) {
         return parse_id_statement();
     }
+
+    // Samostatne stojaci vyraz (napr. cislo)
+    if (check(TOKEN_TYPE_INT_NUMBER) || check(TOKEN_TYPE_DOUBLE_NUMBER) ||
+        check(TOKEN_TYPE_STRING) || check(TOKEN_TYPE_LEFT_PAREN) ||
+        check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
+        DataType expr_type;
+        int res = parse_expression(&expr_type);
+        if (res != SCANNER_TOKEN_OK) return res;
+        return expect(TOKEN_TYPE_EOL);
+    }
     return ERROR_SYNTAX;
 }
 
@@ -894,10 +904,11 @@ static int parse_function(bool is_main) {
             free(func_name);
             return ERROR_SEM_PARAM; // Chyba 5
         }
-        if(return_type != TYPE_UNIT) {
+        if(return_type != TYPE_UNIT && return_type != TYPE_UNDEF) {
             free(func_name);
             return ERROR_SEM_TYPE; // Chyba 6
         }
+        if(return_type == TYPE_UNDEF) return_type = TYPE_UNIT; // odvodeny Unit
     }
 
     res = expect(TOKEN_TYPE_ASSIGN);
@@ -1095,10 +1106,7 @@ int parse_headers(Symtable *st) {
             for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
 
             res = expect(TOKEN_TYPE_ASSIGN);
-            if (res != SCANNER_TOKEN_OK) {
-                for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
-                return res;
-            }
+            if (res != SCANNER_TOKEN_OK) return res;
 
             // Preskocenie tela funkcie
             res = skip_block();
