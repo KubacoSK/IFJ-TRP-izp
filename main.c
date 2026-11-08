@@ -13,18 +13,34 @@
 #include "error.h"
 
 int main(void) {
-    // Nastavenie citania zo standardneho vstupu
-    set_source_file(stdin);
+    // Vytvorenie docasneho suboru a skopirovanie stdin do neho
+    FILE *temp_file = tmpfile();
+    if (!temp_file) return ERROR_INTERNAL;
+
+    int c;
+    while ((c = getchar()) != EOF) {
+        fputc(c, temp_file);
+    }
+    rewind(temp_file);
 
     // Inicializacia tabulky symbolov
     Symtable st;
     symtable_init(&st);
 
-    // Spustenie syntaktickej a semantickej analyzy
-    int result = parse_program(&st);
+    // prvy priechod - zber hlaviciek funkcii
+    set_source_file(temp_file);
+    int result = parse_headers(&st);
+
+    if(result == ERROR_OK) {
+        // druhy priechod - plna analyza tela funkcii
+        rewind(temp_file); // vratenie sa na zaciatok suboru
+        set_source_file(temp_file); // reset scannera
+        result = parse_program(&st);
+    }
 
     // Uvolnenie zdrojov
     symtable_free(&st);
+    fclose(temp_file);
 
     return result;
 }

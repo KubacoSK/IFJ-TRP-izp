@@ -817,9 +817,16 @@ static int parse_function(bool is_main) {
     if (!func_name) return ERROR_INTERNAL;
 
     // sematicka kontrola - redefinicia funkcie
-    if(symtable_find_func(symtab, func_name) != NULL) {
-        free(func_name);
-        return ERROR_SEM_REDEF;
+    Symbol *existing_func = symtable_find_func(symtab, func_name);
+    bool is_from_first_pass = false;
+    if (existing_func != NULL) {
+        if (existing_func->data.func.is_defined) {
+            free(func_name);
+            return ERROR_SEM_REDEF; // Chyba 4
+        }
+        // existuje z prveho priechodu, potvrdime definiciu
+        existing_func->data.func.is_defined = true;
+        is_from_first_pass = true;
     }
 
     res = next_token();
@@ -885,11 +892,13 @@ static int parse_function(bool is_main) {
         return res;
     }
 
-    // pridanie do symtable
-    Symbol *sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, true, false);
-    if (!sym) {
-        free(func_name);
-        return ERROR_INTERNAL;
+    // pridanie do symtable (iba ak nie je z prveho priechodu)
+    if (!is_from_first_pass) {
+        Symbol *sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, true, false);
+        if (!sym) {
+            free(func_name);
+            return ERROR_INTERNAL;
+        }    
     }
     free(func_name); // symtable urobilo kopiu, mozeme uvolnit
 
@@ -905,6 +914,124 @@ static int parse_function(bool is_main) {
     }
 
     return block_res;
+}
+
+// Pomocna funkcia na preskocenie tela funkcie (blok)
+static int skip_block(void) {
+    // po '=' ocakavame EOL a potom INDENT
+    int res = expect(TOKEN_TYPE_EOL);
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    res = expect(TOKEN_TYPE_INDENT);
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    // preskakujeme tokeny, kym nenarazime na koniec bloku (DEDENT)
+    int depth = 1;
+    while (depth > 0 && !check(TOKEN_TYPE_EOF)) {
+        if (check(TOKEN_TYPE_INDENT)) depth++;
+        if (check(TOKEN_TYPE_DEDENT)) depth--;
+        res = next_token();
+        if (res != SCANNER_TOKEN_OK) return res;
+    }
+    return SCANNER_TOKEN_OK;
+}
+// Prvy priechod, zbieraju su hlavicky funkcii
+int parse_headers(Symtable *st) {
+    symtab = st;
+    int res = next_token();
+    if (res != SCANNER_TOKEN_OK && res != TOKEN_TYPE_EOF) return res;
+
+    while (!check(TOKEN_TYPE_EOF)) {
+        if(check(TOKEN_TYPE_EOL)) {
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+            continue;
+        }
+
+        // Preskocenie importov
+        if (check_kw(KEYWORD_IMPORT)) {
+            while (!check(TOKEN_TYPE_EOL) && !check(TOKEN_TYPE_EOF)) {
+                res = next_token();
+                if(res != SCANNER_TOKEN_OK) return res;
+            }
+            continue;
+        }
+
+        // ak vidime @main, preskocime ho
+        if (check(TOKEN_TYPE_MAIN)) {
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+        }
+
+        if (check_kw(KEYWORD_DEF)) {
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+
+            if(!check(TOKEN_TYPE_IDENTIFIER)) return ERROR_SYNTAX;
+
+            char *func_name = str_dup(current_tok.attribute.string);
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) {
+                free(func_name);
+                return res;
+            }
+
+            // kontrola redefinicie
+            if (symtable_find_func(symtab, func_name) != NULL) {
+                free(func_name);
+                return ERROR_SEM_REDEF;
+            }
+
+            Param temp_params[20] = {0};
+            size_t param_count = 0;
+            res = parse_params(temp_params, &param_count);
+            if (res != SCANNER_TOKEN_OK) {
+                free(func_name);
+                return res;
+            }
+            res = expect(TOKEN_TYPE_COLON);
+            if (res != SCANNER_TOKEN_OK) {
+                free(func_name);
+                for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                return res;
+            }
+
+            DataType return_type = TYPE_UNDEF;
+            if (check_kw(KEYWORD_INT)) return_type = TYPE_INT;
+            else if (check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
+            else if (check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
+            else if (check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
+            else {
+                free(func_name);
+                return ERROR_SYNTAX;
+            }
+
+            res = next_token();
+            if (res != SCANNER_TOKEN_OK) {
+                free(func_name);
+                return res;
+            }
+
+            // Ulozenie hlavicky do tabulky
+            if (symtable_add_func(symtab, func_name, return_type, param_count, temp_params, false, false) == NULL) {
+                free(func_name);
+                return ERROR_INTERNAL;
+            }
+
+            free(func_name);
+            for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+
+            res = expect(TOKEN_TYPE_ASSIGN);
+            if (res != SCANNER_TOKEN_OK) return res;
+
+            // Preskocenie tela funkcie
+            res = skip_block();
+            if (res != SCANNER_TOKEN_OK) return res;
+        } else {
+            return ERROR_SYNTAX;
+        }   
+    }
+    return ERROR_OK;
 }
 // Hlavny vstupny bod parsera: spracuje postupnost funkcii
 int parse_program(Symtable *st) {
