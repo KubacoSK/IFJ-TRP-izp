@@ -496,17 +496,43 @@ static int parse_var_def(void) {
     return expect(TOKEN_TYPE_EOL);
 }
 
-// Spracovanie prikazu zacinajuceho identifikatorom (priradenie x = expr alebo volanie f())
+// vyraz ako prikaz
+static int parse_expr_statement(void) {
+    DataType expr_type;
+    int res = parse_expression(&expr_type);
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    // bool len v podmienke
+    if (expr_type == TYPE_BOOL) return ERROR_SEM_TYPE; // chyba 6
+
+    return expect(TOKEN_TYPE_EOL);
+}
+
+// prikaz s id
 static int parse_id_statement(void) {
+    // lookahead
+    Token next_tok;
+    int res = get_token(&next_tok);
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    // samotny vyraz
+    if (next_tok.type != TOKEN_TYPE_ASSIGN && next_tok.type != TOKEN_TYPE_LEFT_PAREN) {
+        // vratit token
+        res = unget_token(next_tok);
+        if (res != SCANNER_TOKEN_OK) return res;
+        return parse_expr_statement();
+    }
+
     // ulozenie nazvu funkcie/premennej pre pouzitie
     char *id_name = str_dup(current_tok.attribute.string);
-    if (!id_name) return ERROR_INTERNAL;
+    if (!id_name) {
+        free_token_attribute(&next_tok);
+        return ERROR_INTERNAL;
+    }
 
-    int res = next_token(); // preskocime identifikator
-    if (res != SCANNER_TOKEN_OK) {
-        free(id_name);
-        return res;
-    } 
+    // posun za id
+    free_token_attribute(&current_tok);
+    current_tok = next_tok;
 
     // Priradenie do premennej: x = expr EOL
     if (check(TOKEN_TYPE_ASSIGN)) {
@@ -621,7 +647,7 @@ static int parse_id_statement(void) {
         return expect(TOKEN_TYPE_EOL);
     }
 
-    free(id_name); // uvolenenie pamate, ak to nieje ani priradenie ani volanie funkcie
+    free(id_name); // nedosiahnutelne
     return ERROR_SYNTAX;
 }
 
@@ -721,10 +747,7 @@ static int parse_statement(void) {
     if (check(TOKEN_TYPE_INT_NUMBER) || check(TOKEN_TYPE_DOUBLE_NUMBER) ||
         check(TOKEN_TYPE_STRING) || check(TOKEN_TYPE_LEFT_PAREN) ||
         check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
-        DataType expr_type;
-        int res = parse_expression(&expr_type);
-        if (res != SCANNER_TOKEN_OK) return res;
-        return expect(TOKEN_TYPE_EOL);
+        return parse_expr_statement();
     }
     return ERROR_SYNTAX;
 }
