@@ -67,6 +67,9 @@ static DataType current_func_return_type = TYPE_UNDEF;
 // explicitny Unit
 static bool current_func_explicit_unit = false;
 
+// typ v hlavicke
+static bool current_func_explicit_type = false;
+
 // Uvolni stary token a nacita dalsi token zo scanneru
 static int next_token(void) {
     free_token_attribute(&current_tok);
@@ -761,11 +764,14 @@ static int parse_return(void) {
         if (res != SCANNER_TOKEN_OK) return res;
     }
 
+    // return bez typu v hlavicke
+    if (!current_func_explicit_type) return ERROR_SEM_TYPE; // chyba 6
+
     // bool len v podmienke
     if (ret_type == TYPE_BOOL) return ERROR_SEM_TYPE; // chyba 6
 
     // kontrola ci sa typ zhoduje s navratovym typom funkcie (pri Unit sa zahodi)
-    if(current_func_return_type != TYPE_UNDEF && !current_func_explicit_unit) {
+    if(!current_func_explicit_unit) {
         // Ak sa typy nezhoduju a neni to konverzia Int -> Double
         if(current_func_return_type != ret_type && 
          !(current_func_return_type == TYPE_DOUBLE && ret_type == TYPE_INT)) {
@@ -969,6 +975,7 @@ static int parse_function(bool is_main) {
     }
     // Unit v hlavicke
     bool explicit_unit = (return_type == TYPE_UNIT);
+    bool explicit_type = (return_type != TYPE_UNDEF);
 
     // sematicka kontrola - @main
     if(is_main) {
@@ -1003,6 +1010,7 @@ static int parse_function(bool is_main) {
     // Ulozenie navratoveho typu pre prikazy 'return' v tele funkcie
     current_func_return_type = return_type;
     current_func_explicit_unit = explicit_unit;
+    current_func_explicit_type = explicit_type;
 
     // spracovanie tela funkcie
     int block_res;
