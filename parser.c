@@ -124,7 +124,7 @@ static int expect_stmt_end(void) {
 
 // Prototypy pravidiel rekurzivneho zostupu
 static int parse_function(bool is_main);
-static int parse_params(Param *params, size_t *param_count);
+static int parse_params(Param **out_params, size_t *param_count);
 static int parse_block(Param *params, size_t param_count);
 static int parse_statement(void);
 static int parse_var_def(void);
@@ -852,50 +852,84 @@ cleanup:
     return res;
 }
 
+// uvolni parametre
+static void free_params(Param *params, size_t count) {
+    if (!params) return;
+    for (size_t i = 0; i < count; i++) free(params[i].name);
+    free(params);
+}
+
 // Spracovanie zoznamu formalnych parametrov funkcie: ( [ id : Type , ... ] )
-static int parse_params(Param *params, size_t *param_count) {
+// pole alokuje, uvolnuje volajuci cez free_params
+static int parse_params(Param **out_params, size_t *param_count) {
+    *out_params = NULL;
     *param_count = 0; // inicializacia poctu parametrov na 0
+
+    Param *params = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
 
     int res = expect(TOKEN_TYPE_LEFT_PAREN);
     if (res != SCANNER_TOKEN_OK) return res;
 
     // prazdny zoznam parametrov
     if (check(TOKEN_TYPE_RIGHT_PAREN)) {
-        return next_token(); 
+        return next_token();
     }
 
     while (1) {
         // nacitanie mena parametra
-        if(!check(TOKEN_TYPE_IDENTIFIER)) return ERROR_SYNTAX;
+        if(!check(TOKEN_TYPE_IDENTIFIER)) {
+            res = ERROR_SYNTAX;
+            goto error;
+        }
+
+        // zvacsit pole
+        if (count == capacity) {
+            size_t new_capacity = capacity ? capacity * 2 : 4;
+            Param *tmp = realloc(params, new_capacity * sizeof(Param));
+            if (!tmp) {
+                res = ERROR_INTERNAL;
+                goto error;
+            }
+            params = tmp;
+            capacity = new_capacity;
+        }
 
         // ulozenie mena parametra
-        params[*param_count].name = str_dup(current_tok.attribute.string);
-        if (!params[*param_count].name) return ERROR_INTERNAL;
+        params[count].name = str_dup(current_tok.attribute.string);
+        if (!params[count].name) {
+            res = ERROR_INTERNAL;
+            goto error;
+        }
+        params[count].type = TYPE_UNDEF;
+        count++; // zvysenie poctu parametrov
 
         res = next_token();
-        if (res != SCANNER_TOKEN_OK) return res;
+        if (res != SCANNER_TOKEN_OK) goto error;
 
         // dvojbodka
         res = expect(TOKEN_TYPE_COLON);
-        if (res != SCANNER_TOKEN_OK) return res;
+        if (res != SCANNER_TOKEN_OK) goto error;
 
         // typ parametra
-        if(check_kw(KEYWORD_INT)) params[*param_count].type = TYPE_INT;
-        else if(check_kw(KEYWORD_DOUBLE)) params[*param_count].type = TYPE_DOUBLE;
-        else if(check_kw(KEYWORD_STRING)) params[*param_count].type = TYPE_STRING;
-        else if(check_kw(KEYWORD_UNIT)) params[*param_count].type = TYPE_UNIT;
-        else return ERROR_SYNTAX;
+        if(check_kw(KEYWORD_INT)) params[count - 1].type = TYPE_INT;
+        else if(check_kw(KEYWORD_DOUBLE)) params[count - 1].type = TYPE_DOUBLE;
+        else if(check_kw(KEYWORD_STRING)) params[count - 1].type = TYPE_STRING;
+        else if(check_kw(KEYWORD_UNIT)) params[count - 1].type = TYPE_UNIT;
+        else {
+            res = ERROR_SYNTAX;
+            goto error;
+        }
 
         res = next_token();
-        if (res != SCANNER_TOKEN_OK) return res;
-
-        (*param_count)++; // zvysenie poctu parametrov
+        if (res != SCANNER_TOKEN_OK) goto error;
 
         // ciarka alebo koniec
         if(check(TOKEN_TYPE_COMMA)) {
             res = next_token();
-            if (res != SCANNER_TOKEN_OK) return res;
-            
+            if (res != SCANNER_TOKEN_OK) goto error;
+
             // osetrenie koncovej ciarky, ak nasleduje ), cyklus sa skonci
             if(check(TOKEN_TYPE_RIGHT_PAREN)) {
                 break;
@@ -905,7 +939,16 @@ static int parse_params(Param *params, size_t *param_count) {
         break; // ak nie je ciarka, ocakava sa koniec zatvorky
     }
 
-    return expect(TOKEN_TYPE_RIGHT_PAREN);
+    res = expect(TOKEN_TYPE_RIGHT_PAREN);
+    if (res != SCANNER_TOKEN_OK) goto error;
+
+    *out_params = params;
+    *param_count = count;
+    return SCANNER_TOKEN_OK;
+
+error:
+    free_params(params, count);
+    return res;
 }
 
 // Definicia funkcie: [ @main ] def id ( parametre ) : Typ = EOL INDENT blok DEDENT
@@ -939,11 +982,11 @@ static int parse_function(bool is_main) {
         return res;
     }
 
-    // pripravenie pola pre parametre (20 staci)
-    Param temp_params[20]; 
+    // dynamicke pole parametrov
+    Param *temp_params = NULL;
     size_t param_count = 0;
 
-    res = parse_params(temp_params, &param_count);
+    res = parse_params(&temp_params, &param_count);
     if (res != SCANNER_TOKEN_OK) {
         free(func_name);
         return res;
@@ -955,7 +998,8 @@ static int parse_function(bool is_main) {
         res = next_token(); // preskocime ':'
         if (res != SCANNER_TOKEN_OK) {
             free(func_name);
-            return res; 
+            free_params(temp_params, param_count);
+            return res;
         }
 
         if(check_kw(KEYWORD_INT)) return_type = TYPE_INT;
@@ -964,12 +1008,14 @@ static int parse_function(bool is_main) {
         else if(check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
         else {
             free(func_name);
+            free_params(temp_params, param_count);
             return ERROR_SYNTAX;
         }
 
         res = next_token();
         if (res != SCANNER_TOKEN_OK) {
             free(func_name);
+            free_params(temp_params, param_count);
             return res;
         }
     }
@@ -981,10 +1027,12 @@ static int parse_function(bool is_main) {
     if(is_main) {
         if(param_count > 0) {
             free(func_name);
+            free_params(temp_params, param_count);
             return ERROR_SEM_PARAM; // Chyba 5
         }
         if(return_type != TYPE_UNIT && return_type != TYPE_UNDEF) {
             free(func_name);
+            free_params(temp_params, param_count);
             return ERROR_SEM_TYPE; // Chyba 6
         }
         if(return_type == TYPE_UNDEF) return_type = TYPE_UNIT; // odvodeny Unit
@@ -993,6 +1041,7 @@ static int parse_function(bool is_main) {
     res = expect(TOKEN_TYPE_ASSIGN);
     if (res != SCANNER_TOKEN_OK) {
         free(func_name);
+        free_params(temp_params, param_count);
         return res;
     }
 
@@ -1001,9 +1050,9 @@ static int parse_function(bool is_main) {
         Symbol *sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, true, false);
         if (!sym) {
             free(func_name);
-            for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            free_params(temp_params, param_count);
             return ERROR_INTERNAL;
-        }    
+        }
     }
     free(func_name); // symtable urobilo kopiu, mozeme uvolnit
 
@@ -1018,7 +1067,7 @@ static int parse_function(bool is_main) {
     if(check(TOKEN_TYPE_EOL)) {
         res = next_token();
         if (res != SCANNER_TOKEN_OK) {
-            for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            free_params(temp_params, param_count);
             return res;
         }
         block_res = parse_block(temp_params, param_count);
@@ -1033,7 +1082,7 @@ static int parse_function(bool is_main) {
         for(size_t i = 0 ; i < param_count; i++) {
             if(symtable_add_var(symtab, temp_params[i].name, temp_params[i].type, true, true) == NULL) {
                 symtable_pop_scope(symtab);
-                for(size_t j = 0; j < param_count; j++) free(temp_params[j].name);
+                free_params(temp_params, param_count);
                 return ERROR_INTERNAL;
             }
         }
@@ -1042,14 +1091,14 @@ static int parse_function(bool is_main) {
         res = parse_expression(&expr_type);
         if (res != SCANNER_TOKEN_OK) {
             symtable_pop_scope(symtab);
-            for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            free_params(temp_params, param_count);
             return res;
         }
 
         // bool len v podmienke
         if(expr_type == TYPE_BOOL) {
             symtable_pop_scope(symtab);
-            for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            free_params(temp_params, param_count);
             return ERROR_SEM_TYPE; // chyba 6
         }
 
@@ -1057,7 +1106,7 @@ static int parse_function(bool is_main) {
         if(return_type != TYPE_UNDEF && !explicit_unit) {
             if(return_type != expr_type && !(return_type == TYPE_DOUBLE && expr_type == TYPE_INT)) {
                 symtable_pop_scope(symtab);
-                for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                free_params(temp_params, param_count);
                 return ERROR_SEM_TYPE; // chyba 6
             }
         }
@@ -1070,7 +1119,7 @@ static int parse_function(bool is_main) {
 
     
     // uvolnenie docasnych parametrov
-    for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+    free_params(temp_params, param_count);
 
     return block_res;
 }
@@ -1153,9 +1202,9 @@ int parse_headers(Symtable *st) {
                 return ERROR_SEM_REDEF;
             }
 
-            Param temp_params[20] = {0};
+            Param *temp_params = NULL;
             size_t param_count = 0;
-            res = parse_params(temp_params, &param_count);
+            res = parse_params(&temp_params, &param_count);
             if (res != SCANNER_TOKEN_OK) {
                 free(func_name);
                 return res;
@@ -1166,7 +1215,7 @@ int parse_headers(Symtable *st) {
                 res = next_token(); // preskocime ':'
                 if (res != SCANNER_TOKEN_OK) {
                     free(func_name);
-                    for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                    free_params(temp_params, param_count);
                     return res;
                 }
 
@@ -1176,24 +1225,26 @@ int parse_headers(Symtable *st) {
                 else if (check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
                 else {
                     free(func_name);
+                    free_params(temp_params, param_count);
                     return ERROR_SYNTAX;
                 }
 
                 res = next_token();
                 if (res != SCANNER_TOKEN_OK) {
                     free(func_name);
+                    free_params(temp_params, param_count);
                     return res;
                 }
             }
             // Ulozenie hlavicky do tabulky
             if (symtable_add_func(symtab, func_name, return_type, param_count, temp_params, false, false) == NULL) {
                 free(func_name);
-                for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+                free_params(temp_params, param_count);
                 return ERROR_INTERNAL;
             }
 
             free(func_name);
-            for (size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            free_params(temp_params, param_count);
 
             res = expect(TOKEN_TYPE_ASSIGN);
             if (res != SCANNER_TOKEN_OK) return res;
