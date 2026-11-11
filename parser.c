@@ -96,6 +96,15 @@ static int expect_kw(Keyword kw) {
     return next_token();
 }
 
+// preskoc EOL
+static int skip_eols(void) {
+    while (check(TOKEN_TYPE_EOL)) {
+        int res = next_token();
+        if (res != SCANNER_TOKEN_OK) return res;
+    }
+    return SCANNER_TOKEN_OK;
+}
+
 // Prototypy pravidiel rekurzivneho zostupu
 static int parse_function(bool is_main);
 static int parse_params(Param *params, size_t *param_count);
@@ -1065,6 +1074,8 @@ int parse_headers(Symtable *st) {
         if (check(TOKEN_TYPE_MAIN)) {
             res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
+            res = skip_eols(); // @main na riadku
+            if (res != SCANNER_TOKEN_OK) return res;
         }
 
         if (check_kw(KEYWORD_DEF)) {
@@ -1201,6 +1212,8 @@ int parse_program(Symtable *st) {
             main_count++;
             if(main_count > 1) return ERROR_SEM_REDEF; // Chyba 4: viacero @main
             res = next_token();
+            if (res != SCANNER_TOKEN_OK) return res;
+            res = skip_eols(); // @main na riadku
             if (res != SCANNER_TOKEN_OK) return res;
             res = parse_function(true);
             if (res != SCANNER_TOKEN_OK) return res;
