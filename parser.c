@@ -64,6 +64,9 @@ static Symtable *symtab = NULL;
 // aktualny navratovy typ, v ktorej sa nachadzame
 static DataType current_func_return_type = TYPE_UNDEF;
 
+// explicitny Unit
+static bool current_func_explicit_unit = false;
+
 // Uvolni stary token a nacita dalsi token zo scanneru
 static int next_token(void) {
     free_token_attribute(&current_tok);
@@ -732,8 +735,11 @@ static int parse_return(void) {
         if (res != SCANNER_TOKEN_OK) return res;
     }
 
-    // kontrola ci sa typ zhoduje s navratovym typom funkcie
-    if(current_func_return_type != TYPE_UNDEF) {
+    // bool len v podmienke
+    if (ret_type == TYPE_BOOL) return ERROR_SEM_TYPE; // chyba 6
+
+    // kontrola ci sa typ zhoduje s navratovym typom funkcie (pri Unit sa zahodi)
+    if(current_func_return_type != TYPE_UNDEF && !current_func_explicit_unit) {
         // Ak sa typy nezhoduju a neni to konverzia Int -> Double
         if(current_func_return_type != ret_type && 
          !(current_func_return_type == TYPE_DOUBLE && ret_type == TYPE_INT)) {
@@ -935,6 +941,9 @@ static int parse_function(bool is_main) {
             return res;
         }
     }
+    // Unit v hlavicke
+    bool explicit_unit = (return_type == TYPE_UNIT);
+
     // sematicka kontrola - @main
     if(is_main) {
         if(param_count > 0) {
@@ -967,6 +976,7 @@ static int parse_function(bool is_main) {
 
     // Ulozenie navratoveho typu pre prikazy 'return' v tele funkcie
     current_func_return_type = return_type;
+    current_func_explicit_unit = explicit_unit;
 
     // spracovanie tela funkcie
     int block_res;
@@ -1002,8 +1012,15 @@ static int parse_function(bool is_main) {
             return res;
         }
 
-        // typova kontrola navratoveho typu
-        if(return_type != TYPE_UNDEF) {
+        // bool len v podmienke
+        if(expr_type == TYPE_BOOL) {
+            symtable_pop_scope(symtab);
+            for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
+            return ERROR_SEM_TYPE; // chyba 6
+        }
+
+        // typova kontrola navratoveho typu (pri Unit sa zahodi)
+        if(return_type != TYPE_UNDEF && !explicit_unit) {
             if(return_type != expr_type && !(return_type == TYPE_DOUBLE && expr_type == TYPE_INT)) {
                 symtable_pop_scope(symtab);
                 for(size_t i = 0; i < param_count; i++) free(temp_params[i].name);
