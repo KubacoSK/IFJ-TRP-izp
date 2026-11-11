@@ -132,6 +132,22 @@ static int parse_return(void);
 static int parse_term(DataType *out_type);
 static int parse_expression(DataType *out_type);
 
+// vyraz v zatvorke
+static int parse_paren_expr(DataType *out_type) {
+    int res = next_token(); // (
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    // prazdne ()
+    if (check(TOKEN_TYPE_RIGHT_PAREN)) {
+        *out_type = TYPE_UNIT;
+        return next_token();
+    }
+
+    res = parse_expression(out_type);
+    if (res != SCANNER_TOKEN_OK) return res;
+    return expect(TOKEN_TYPE_RIGHT_PAREN);
+}
+
 // Spracovanie jednoducheho vyrazu (literal, premenna alebo volanie funkcie)
 static int parse_term(DataType *out_type) {
 
@@ -139,7 +155,9 @@ static int parse_term(DataType *out_type) {
     if (check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
         int res = next_token();
         if (res != SCANNER_TOKEN_OK) return res;
-        res = parse_term(out_type); // rekurzivne precitanie operandu
+        // -(...) cely vyraz
+        if (check(TOKEN_TYPE_LEFT_PAREN)) res = parse_paren_expr(out_type);
+        else res = parse_term(out_type); // rekurzivne precitanie operandu
         if (res != SCANNER_TOKEN_OK) return res;
 
         // unarne operatory su povolene len pre cisla
@@ -335,7 +353,10 @@ static int parse_expression(DataType *out_type) {
 
     // priznak, ci ocakavame operand
     bool expect_opd = true;
-    
+
+    // otvorene (
+    int open_parens = 0;
+
     while(1) {
 
         // zistime ci je + alebo - unarne
@@ -370,6 +391,9 @@ static int parse_expression(DataType *out_type) {
         // ak je nieco, co neni v tabulke, vezmeme to ako koniec vyrazu
         if (curr_index == -1 ) curr_index = 12; // EOL
 
+        // cudzia ) je koniec
+        if (curr_op == TOKEN_TYPE_RIGHT_PAREN && open_parens == 0) curr_index = 12;
+
         // ak sme na konci vyrazu ($), skoncime
         if(top_op == TOKEN_TYPE_EOL && curr_index == 12) {
             break;
@@ -380,6 +404,7 @@ static int parse_expression(DataType *out_type) {
         if (action == '<') {
             // SHIFT: posunieme operator na zasobnik a precitame dalsi token
             op_stack[++op_top] = curr_op;
+            if (curr_op == TOKEN_TYPE_LEFT_PAREN) open_parens++;
             expect_opd = true; // po operatori ocakavame operand
             int res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
@@ -387,6 +412,7 @@ static int parse_expression(DataType *out_type) {
         else if (action == '=') {
             // MATCH: zahodine '(' zo zasobnika a precitame ')'
             op_top--;
+            open_parens--;
 
             // osetrenie prazdnych zatvoriek
             if(type_top < op_top) {
