@@ -105,6 +105,17 @@ static int skip_eols(void) {
     return SCANNER_TOKEN_OK;
 }
 
+// koniec prikazu
+static bool at_stmt_end(void) {
+    return check(TOKEN_TYPE_EOL) || check(TOKEN_TYPE_SEMICOLON);
+}
+
+// EOL alebo ;
+static int expect_stmt_end(void) {
+    if (check(TOKEN_TYPE_SEMICOLON)) return next_token();
+    return expect(TOKEN_TYPE_EOL);
+}
+
 // Prototypy pravidiel rekurzivneho zostupu
 static int parse_function(bool is_main);
 static int parse_params(Param *params, size_t *param_count);
@@ -502,7 +513,7 @@ static int parse_var_def(void) {
     }
 
     free(var_name); // symtable urobilo vlastnu kopiu, toto teda mozeme uvolnit
-    return expect(TOKEN_TYPE_EOL);
+    return expect_stmt_end();
 }
 
 // vyraz ako prikaz
@@ -514,7 +525,7 @@ static int parse_expr_statement(void) {
     // bool len v podmienke
     if (expr_type == TYPE_BOOL) return ERROR_SEM_TYPE; // chyba 6
 
-    return expect(TOKEN_TYPE_EOL);
+    return expect_stmt_end();
 }
 
 // prikaz s id
@@ -584,7 +595,7 @@ static int parse_id_statement(void) {
         }
         
         free(id_name);
-        return expect(TOKEN_TYPE_EOL);
+        return expect_stmt_end();
     }
 
     // Samostatne volanie funkcie ako prikaz: foo(arg1, arg2) EOL
@@ -653,7 +664,7 @@ static int parse_id_statement(void) {
         }
 
         free(id_name);
-        return expect(TOKEN_TYPE_EOL);
+        return expect_stmt_end();
     }
 
     free(id_name); // nedosiahnutelne
@@ -716,7 +727,7 @@ static int parse_return(void) {
 
     DataType ret_type = TYPE_UNIT; // Predvolene, ak nasleduje EOL
 
-    if (!check(TOKEN_TYPE_EOL)) {
+    if (!at_stmt_end()) {
         res = parse_expression(&ret_type);
         if (res != SCANNER_TOKEN_OK) return res;
     }
@@ -730,8 +741,8 @@ static int parse_return(void) {
         }
     }
 
-    
-    return expect(TOKEN_TYPE_EOL);
+
+    return expect_stmt_end();
 }
 
 // Spracovanie jedneho prikazu v bloku
@@ -788,14 +799,8 @@ static int parse_block(Param *params, size_t param_count) {
         }
 
         has_statements = true;
-        res = parse_statement();
+        res = parse_statement(); // ; spracuje prikaz
         if (res != SCANNER_TOKEN_OK) goto cleanup;
-
-        // spracovanie strednika
-        if (check(TOKEN_TYPE_SEMICOLON)) {
-            res = next_token();
-            if (res != SCANNER_TOKEN_OK) goto cleanup;
-        }
     }
     if(!has_statements) {
         symtable_pop_scope(symtab);
