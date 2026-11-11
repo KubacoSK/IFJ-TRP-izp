@@ -256,6 +256,8 @@ static int parse_term(DataType *out_type) {
                             free(id_name);
                             return res;
                         }
+                        // koncova ciarka len pred novym riadkom
+                        if (check(TOKEN_TYPE_RIGHT_PAREN) && current_tok.had_preceding_newline) break;
                         continue;
                     }
                     break;
@@ -677,6 +679,8 @@ static int parse_id_statement(void) {
                         free(id_name);
                         return res;
                     }
+                    // koncova ciarka len pred novym riadkom
+                    if (check(TOKEN_TYPE_RIGHT_PAREN) && current_tok.had_preceding_newline) break;
                     continue;
                 }
                 break;
@@ -938,8 +942,12 @@ static int parse_params(Param **out_params, size_t *param_count) {
             res = next_token();
             if (res != SCANNER_TOKEN_OK) goto error;
 
-            // osetrenie koncovej ciarky, ak nasleduje ), cyklus sa skonci
+            // koncova ciarka len pred novym riadkom
             if(check(TOKEN_TYPE_RIGHT_PAREN)) {
+                if (!current_tok.had_preceding_newline) {
+                    res = ERROR_SYNTAX;
+                    goto error;
+                }
                 break;
             }
             continue; // ide sa na dalsi parameter
