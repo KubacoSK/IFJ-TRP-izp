@@ -884,6 +884,14 @@ static int parse_params(Param **out_params, size_t *param_count) {
             goto error;
         }
 
+        // duplicitny parameter
+        for (size_t i = 0; i < count; i++) {
+            if (strcmp(params[i].name, current_tok.attribute.string) == 0) {
+                res = ERROR_SEM_REDEF; // chyba 4
+                goto error;
+            }
+        }
+
         // zvacsit pole
         if (count == capacity) {
             size_t new_capacity = capacity ? capacity * 2 : 4;
