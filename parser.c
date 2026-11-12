@@ -419,8 +419,8 @@ static int parse_expression(DataType *out_type) {
             op_top--;
             open_parens--;
 
-            // osetrenie prazdnych zatvoriek
-            if(type_top < op_top) {
+            // prazdne () = Unit
+            if(expect_opd) {
                 type_stack[++type_top] = TYPE_UNIT;
             }
 
