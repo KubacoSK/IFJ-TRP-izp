@@ -223,6 +223,163 @@ static int parse_return(void);
 static int parse_term(DataType *out_type);
 static int parse_expression(DataType *out_type);
 
+// stav analyzy tela funkcie
+typedef enum {
+    FUNC_PENDING,       // este neanalyzovana
+    FUNC_IN_PROGRESS,   // prave sa analyzuje
+    FUNC_DONE           // hotova, typ je znamy
+} FuncState;
+
+// uzivatelska funkcia z prveho priechodu
+typedef struct {
+    Symbol *sym;            // symbol v globalnej tabulke
+    size_t def_pos;         // index tokenu def
+    size_t end_pos;         // index tokenu za telom
+    bool is_main;           // anotacia @main
+    bool explicit_type;     // typ v hlavicke
+    FuncState state;
+    int *callees;           // volane uzivatelske funkcie (graf volani)
+    size_t callee_count;
+    size_t callee_cap;
+} FuncEntry;
+
+static FuncEntry *funcs = NULL;
+static size_t func_count = 0;
+static size_t func_cap = 0;
+static int current_func = -1;   // index analyzovanej funkcie
+
+// prida funkciu z prveho priechodu
+static int add_func_entry(Symbol *sym, size_t def_pos, bool is_main, bool explicit_type) {
+    if (func_count == func_cap) {
+        size_t new_cap = func_cap ? func_cap * 2 : 16;
+        FuncEntry *tmp = realloc(funcs, new_cap * sizeof(FuncEntry));
+        if (!tmp) return ERROR_INTERNAL;
+        funcs = tmp;
+        func_cap = new_cap;
+    }
+    FuncEntry e = {sym, def_pos, def_pos, is_main, explicit_type, FUNC_PENDING, NULL, 0, 0};
+    funcs[func_count++] = e;
+    return SCANNER_TOKEN_OK;
+}
+
+// funkcia podla symbolu, -1 = vstavana
+static int find_func_entry(const Symbol *sym) {
+    for (size_t i = 0; i < func_count; i++) {
+        if (funcs[i].sym == sym) return (int)i;
+    }
+    return -1;
+}
+
+// funkcia podla pozicie def
+static int find_func_at(size_t def_pos) {
+    for (size_t i = 0; i < func_count; i++) {
+        if (funcs[i].def_pos == def_pos) return (int)i;
+    }
+    return -1;
+}
+
+// hrana grafu volani from -> to
+static int add_callee(int from, int to) {
+    FuncEntry *e = &funcs[from];
+    if (e->callee_count == e->callee_cap) {
+        size_t new_cap = e->callee_cap ? e->callee_cap * 2 : 4;
+        int *tmp = realloc(e->callees, new_cap * sizeof(int));
+        if (!tmp) return ERROR_INTERNAL;
+        e->callees = tmp;
+        e->callee_cap = new_cap;
+    }
+    e->callees[e->callee_count++] = to;
+    return SCANNER_TOKEN_OK;
+}
+
+// analyza tela funkcie idx, aktualny token musi byt jej def
+static int analyze_function(int idx) {
+    int prev = current_func;
+    current_func = idx;
+    funcs[idx].state = FUNC_IN_PROGRESS;
+
+    int res = parse_function(funcs[idx].is_main);
+    if (res == SCANNER_TOKEN_OK) funcs[idx].state = FUNC_DONE;
+
+    current_func = prev;
+    return res;
+}
+
+// analyza na poziadanie: skok na telo, potom navrat na povodne miesto
+static int analyze_on_demand(int idx) {
+    // ulozenie stavu volajucej funkcie
+    size_t saved_pos = pos;
+    DataType saved_ret = current_func_return_type;
+    bool saved_unit = current_func_explicit_unit;
+    bool saved_type = current_func_explicit_type;
+    bool saved_semi = after_semicolon;
+
+    // volana funkcia nevidi lokalne premenne volajuceho
+    Scope *saved_scope = symtab->current_scope;
+    symtab->current_scope = NULL;
+
+    pos = funcs[idx].def_pos;
+    int res = analyze_function(idx);
+
+    // obnova stavu
+    symtab->current_scope = saved_scope;
+    pos = saved_pos;
+    current_func_return_type = saved_ret;
+    current_func_explicit_unit = saved_unit;
+    current_func_explicit_type = saved_type;
+    after_semicolon = saved_semi;
+    return res;
+}
+
+// volanie funkcie: zapise hranu a zisti jej typ, ak este nie je znamy
+static int use_function(const Symbol *func) {
+    int idx = find_func_entry(func);
+    if (idx < 0) return SCANNER_TOKEN_OK; // vstavana funkcia
+
+    if (current_func >= 0) {
+        int res = add_callee(current_func, idx);
+        if (res != SCANNER_TOKEN_OK) return res;
+    }
+
+    FuncEntry *e = &funcs[idx];
+    if (e->explicit_type || e->is_main || e->state == FUNC_DONE) return SCANNER_TOKEN_OK;
+
+    // rekurzia bez typu v hlavicke
+    if (e->state == FUNC_IN_PROGRESS) return ERROR_SEM_TYPE; // chyba 6
+
+    return analyze_on_demand(idx);
+}
+
+// da sa z from dostat do target cez graf volani
+static bool reaches(int from, int target, bool *visited) {
+    for (size_t i = 0; i < funcs[from].callee_count; i++) {
+        int c = funcs[from].callees[i];
+        if (c == target) return true;
+        if (!visited[c]) {
+            visited[c] = true;
+            if (reaches(c, target, visited)) return true;
+        }
+    }
+    return false;
+}
+
+// priama aj neprama rekurzia vyzaduje typ v hlavicke
+static int check_recursion(void) {
+    if (func_count == 0) return SCANNER_TOKEN_OK;
+    bool *visited = malloc(func_count * sizeof(bool));
+    if (!visited) return ERROR_INTERNAL;
+
+    int res = SCANNER_TOKEN_OK;
+    for (size_t i = 0; i < func_count && res == SCANNER_TOKEN_OK; i++) {
+        if (funcs[i].explicit_type) continue;
+        memset(visited, 0, func_count * sizeof(bool));
+        if (reaches((int)i, (int)i, visited)) res = ERROR_SEM_TYPE; // chyba 6
+    }
+
+    free(visited);
+    return res;
+}
+
 // vyraz v zatvorke
 static int parse_paren_expr(DataType *out_type) {
     int res = next_token(); // (
@@ -299,6 +456,13 @@ static int parse_term(DataType *out_type) {
             if(!func) {
                 free(id_name);
                 return ERROR_SEM_UNDEF; // Chyba 3
+            }
+
+            // typ volanej funkcie
+            res = use_function(func);
+            if (res != SCANNER_TOKEN_OK) {
+                free(id_name);
+                return res;
             }
 
             res = next_token(); // (
@@ -774,6 +938,13 @@ static int parse_id_statement(StmtResult *out) {
         if (!func) {
             free(id_name);
             return ERROR_SEM_UNDEF; // Chyba 3
+        }
+
+        // typ volanej funkcie
+        res = use_function(func);
+        if (res != SCANNER_TOKEN_OK) {
+            free(id_name);
+            return res;
         }
 
         res = next_token();
@@ -1396,7 +1567,9 @@ int parse_headers(Symtable *st) {
         }
 
         // ak vidime @main, preskocime ho
+        bool is_main = false;
         if (check(TOKEN_TYPE_MAIN)) {
+            is_main = true;
             res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
             res = skip_eols(); // @main na riadku
@@ -1404,6 +1577,7 @@ int parse_headers(Symtable *st) {
         }
 
         if (check_kw(KEYWORD_DEF)) {
+            size_t def_pos = pos; // sem skoci analyza na poziadanie
             res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
 
@@ -1446,15 +1620,20 @@ int parse_headers(Symtable *st) {
                     return res;
                 }
             }
-            // Ulozenie hlavicky do tabulky
-            if (symtable_add_func(symtab, func_name, return_type, param_count, temp_params, false, false) == NULL) {
-                free(func_name);
-                free_params(temp_params, param_count);
-                return ERROR_INTERNAL;
-            }
+            bool explicit_type = (return_type != TYPE_UNDEF);
 
+            // @main bez typu ma vysledok Unit
+            if (is_main && !explicit_type) return_type = TYPE_UNIT;
+
+            // Ulozenie hlavicky do tabulky
+            Symbol *sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, false, false);
             free(func_name);
             free_params(temp_params, param_count);
+            if (sym == NULL) return ERROR_INTERNAL;
+
+            // zaznam pre analyzu na poziadanie
+            res = add_func_entry(sym, def_pos, is_main, explicit_type);
+            if (res != SCANNER_TOKEN_OK) return res;
 
             res = expect(TOKEN_TYPE_ASSIGN);
             if (res != SCANNER_TOKEN_OK) return res;
@@ -1462,12 +1641,28 @@ int parse_headers(Symtable *st) {
             // Preskocenie tela funkcie
             res = skip_block();
             if (res != SCANNER_TOKEN_OK) return res;
+            funcs[func_count - 1].end_pos = pos;
         } else {
             return ERROR_SYNTAX;
         }   
     }
     return ERROR_OK;
 }
+// funkcia v poradi zo suboru, analyzovanu na poziadanie preskoci
+static int process_function(void) {
+    if (!check_kw(KEYWORD_DEF)) return ERROR_SYNTAX;
+
+    int idx = find_func_at(pos);
+    if (idx < 0) return ERROR_INTERNAL; // prvy priechod ju musel zapisat
+
+    // uz hotova, preskocime telo
+    if (funcs[idx].state == FUNC_DONE) {
+        pos = funcs[idx].end_pos;
+        return token_status();
+    }
+    return analyze_function(idx);
+}
+
 // Hlavny vstupny bod parsera: spracuje postupnost funkcii
 int parse_program(Symtable *st) {
     symtab = st;
@@ -1531,13 +1726,13 @@ int parse_program(Symtable *st) {
             if (res != SCANNER_TOKEN_OK) return res;
             res = skip_eols(); // @main na riadku
             if (res != SCANNER_TOKEN_OK) return res;
-            res = parse_function(true);
+            res = process_function();
             if (res != SCANNER_TOKEN_OK) return res;
             continue;
         }
 
         if (check_kw(KEYWORD_DEF)) {
-            res = parse_function(false);
+            res = process_function();
             if (res != SCANNER_TOKEN_OK) return res;
             continue;
         }
@@ -1545,13 +1740,17 @@ int parse_program(Symtable *st) {
         return ERROR_SYNTAX;
     }
 
+    // rekurzia bez typu v hlavicke (aj neprama cez funkciu s typom)
+    res = check_recursion();
+    if (res != SCANNER_TOKEN_OK) return res;
+
     // overime ci main vobec existoval
     if (main_count == 0) return ERROR_SEM_UNDEF; // Chyba 3: @main neexistuje
 
     return ERROR_OK;
 }
 
-// uvolni pole tokenov
+// uvolni pole tokenov a tabulku funkcii
 void parser_free(void) {
     for (size_t i = 0; i < token_count; i++) free_token_attribute(&tokens[i]);
     free(tokens);
@@ -1560,4 +1759,11 @@ void parser_free(void) {
     token_cap = 0;
     pos = 0;
     lex_error = SCANNER_TOKEN_OK;
+
+    for (size_t i = 0; i < func_count; i++) free(funcs[i].callees);
+    free(funcs);
+    funcs = NULL;
+    func_count = 0;
+    func_cap = 0;
+    current_func = -1;
 }

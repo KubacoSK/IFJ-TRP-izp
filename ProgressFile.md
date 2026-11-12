@@ -149,16 +149,20 @@ Posledná aktualizácia: 12. 11. 2026
 - [x] Boolean iba v podmienke `if` / `while` (inde chyba 6).
 - [x] Explicitný `Unit`: hodnota `return` a jednoriadkového tela sa zahodí.
 - [x] `return` vo funkcii bez explicitného návratového typu (6).
-- [~] **Finding 4:** odvodený návratový typ sa ukladá do symtable (jedno- aj
-  viacriadkové telo); funkciu bez typu volanú **pred** jej definíciou treba ešte
-  analyzovať na požiadanie (O12, typ je zatiaľ `TYPE_UNDEF`).
+- [x] **Finding 4:** odvodený návratový typ sa ukladá do symtable; funkcia bez
+  typu volaná pred definíciou sa analyzuje na požiadanie (skok v poli tokenov,
+  bez prístupu k lokálnym premenným volajúceho, potom sa v poradí preskočí).
+- [x] Rekurzia bez typu v hlavičke (6): priama/vzájomná počas analýzy (stav
+  „prebieha“), nepriama cez funkciu s typom cez graf volaní (DFS na konci).
+- [ ] Parser pri analýze na požiadanie priamo mení `symtab->current_scope`
+  (Symtable nie je skrytý ADT). Na obhajobu by bolo čistejšie pridať do
+  `symtable` funkciu na odpojenie/obnovenie rozsahov – rozhodnúť v tíme
+  (pozor: AI sa pri implementácii vyhľadávacej štruktúry nesmie použiť).
 - [x] Výsledok bloku (`StmtResult`): posledný príkaz určuje výsledok tela,
   definícia/priradenie/`while` = `Unit`; kontroluje sa aj nedosiahnuteľný kód.
 - [x] Pravidlá pre `if` na konci tela funkcie (explicitný `Unit` / všetky vetvy
   `return` / bez typu a všetky vetvy `Unit`), rekurzívne pre vnorený `if`.
 - [x] `@main` bez typu musí mať výsledok tela `Unit`.
-- [ ] Rekurzia (priama aj nepriama) bez explicitného návratového typu (6) –
-  zatiaľ sa nekontroluje.
 - [ ] Porovnanie `==` / `!=` dvoch hodnôt `Unit` vracia 6, špecifikácia
   povoľuje porovnanie hodnôt rovnakého typu.
 - [ ] Overiť na fóre: chyba 6 vs. 10 pre nepovolený `return` (samostatný
@@ -225,8 +229,8 @@ Posledná aktualizácia: 12. 11. 2026
 
 1. ~~Odstrániť `tmpfile()` – pole tokenov v pamäti.~~ Hotové.
 2. ~~Opraviť chyby precedenčnej analýzy.~~ Hotové.
-3. Doplniť výsledok bloku a pravidlá návratovej hodnoty (O11), potom analýzu
-   tela na požiadanie a graf volaní (O12, finding 4, rekurzia).
+3. ~~Výsledok bloku, pravidlá návratovej hodnoty (O11), analýza na požiadanie
+   a graf volaní (O12, finding 4).~~ Hotové.
 4. Navrhnúť a implementovať generátor IFJcode26 – bez neho nepôjdu validné testy.
 5. Pridať end-to-end testy a skript do `tests/`.
 6. Spustiť build a testy na Merlin, `clang-format`, hlavičky súborov.
