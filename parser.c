@@ -189,14 +189,35 @@ static int parse_type(DataType *out) {
     return next_token();
 }
 
+// vysledok prikazu alebo bloku (pravidla navratovej hodnoty 2.3)
+typedef struct {
+    DataType type;      // typ vysledku, definicia/priradenie/cyklus = Unit
+    bool ends_with_if;  // posledny prikaz je if
+    bool all_return;    // vsetky vetvy koncia return
+    bool all_unit;      // vysledky vsetkych vetiev su Unit
+} StmtResult;
+
+// jednoduchy prikaz s typom
+static void set_result(StmtResult *out, DataType type) {
+    out->type = type;
+    out->ends_with_if = false;
+    out->all_return = false;
+    out->all_unit = (type == TYPE_UNIT);
+}
+
+// typ source mozno pouzit ako target
+static bool is_compatible(DataType target, DataType source) {
+    return target == source || (target == TYPE_DOUBLE && source == TYPE_INT);
+}
+
 // Prototypy pravidiel rekurzivneho zostupu
 static int parse_function(bool is_main);
 static int parse_params(Param **out_params, size_t *param_count);
-static int parse_block(Param *params, size_t param_count);
-static int parse_statement(void);
+static int parse_block(Param *params, size_t param_count, StmtResult *out);
+static int parse_statement(StmtResult *out);
 static int parse_var_def(void);
-static int parse_id_statement(void);
-static int parse_if(void);
+static int parse_id_statement(StmtResult *out);
+static int parse_if(StmtResult *out);
 static int parse_while(void);
 static int parse_return(void);
 static int parse_term(DataType *out_type);
@@ -667,8 +688,8 @@ static int parse_var_def(void) {
     return expect_stmt_end();
 }
 
-// vyraz ako prikaz
-static int parse_expr_statement(void) {
+// vyraz ako prikaz, vysledok je typ vyrazu
+static int parse_expr_statement(StmtResult *out) {
     DataType expr_type;
     int res = parse_expression(&expr_type);
     if (res != SCANNER_TOKEN_OK) return res;
@@ -676,17 +697,18 @@ static int parse_expr_statement(void) {
     // bool len v podmienke
     if (expr_type == TYPE_BOOL) return ERROR_SEM_TYPE; // chyba 6
 
+    set_result(out, expr_type);
     return expect_stmt_end();
 }
 
 // prikaz s id
-static int parse_id_statement(void) {
+static int parse_id_statement(StmtResult *out) {
     // lookahead, za id je vzdy aspon EOF alebo zarazka
     TokenType next_type = tokens[pos + 1].type;
 
     // samotny vyraz
     if (next_type != TOKEN_TYPE_ASSIGN && next_type != TOKEN_TYPE_LEFT_PAREN) {
-        return parse_expr_statement();
+        return parse_expr_statement(out);
     }
 
     // ulozenie nazvu funkcie/premennej pre pouzitie
@@ -739,7 +761,8 @@ static int parse_id_statement(void) {
             }
 
         }
-        
+
+        set_result(out, TYPE_UNIT); // priradenie = Unit
         free(id_name);
         return expect_stmt_end();
     }
@@ -806,11 +829,12 @@ static int parse_id_statement(void) {
         }
 
         res = expect(TOKEN_TYPE_RIGHT_PAREN);
-        if (res != SCANNER_TOKEN_OK){ 
+        if (res != SCANNER_TOKEN_OK){
             free(id_name);
             return res;
         }
 
+        set_result(out, func->data.func.return_type); // vysledok volania
         free(id_name);
         return expect_stmt_end();
     }
@@ -820,7 +844,7 @@ static int parse_id_statement(void) {
 }
 
 // Podmienka: if expr then EOL INDENT blok DEDENT else EOL INDENT blok DEDENT
-static int parse_if(void) {
+static int parse_if(StmtResult *out) {
     int res = next_token(); // preskocime 'if'
     if (res != SCANNER_TOKEN_OK) return res;
 
@@ -836,7 +860,8 @@ static int parse_if(void) {
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
 
-    res = parse_block(NULL, 0);
+    StmtResult then_res;
+    res = parse_block(NULL, 0, &then_res);
     if (res != SCANNER_TOKEN_OK) return res;
 
     res = expect_kw(KEYWORD_ELSE);
@@ -844,8 +869,17 @@ static int parse_if(void) {
 
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
-    
-    return parse_block(NULL, 0);
+
+    StmtResult else_res;
+    res = parse_block(NULL, 0, &else_res);
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    // if nie je vyraz, rozhoduju vetvy
+    out->type = TYPE_UNIT;
+    out->ends_with_if = true;
+    out->all_return = then_res.all_return && else_res.all_return;
+    out->all_unit = then_res.all_unit && else_res.all_unit;
+    return SCANNER_TOKEN_OK;
 }
 
 // Cyklus: while expr do EOL INDENT blok DEDENT
@@ -865,7 +899,9 @@ static int parse_while(void) {
     res = expect(TOKEN_TYPE_EOL);
     if (res != SCANNER_TOKEN_OK) return res;
 
-    return parse_block(NULL, 0);
+    // vysledok tela cyklu sa neprenasa
+    StmtResult body_res;
+    return parse_block(NULL, 0, &body_res);
 }
 
 // Prikaz navratu: return [expr] EOL
@@ -899,39 +935,45 @@ static int parse_return(void) {
     return expect_stmt_end();
 }
 
-// Spracovanie jedneho prikazu v bloku
-static int parse_statement(void) {
+// Spracovanie jedneho prikazu v bloku, out = vysledok prikazu
+static int parse_statement(StmtResult *out) {
+    // definicia a cyklus = Unit
+    set_result(out, TYPE_UNIT);
+
     if (check_kw(KEYWORD_VAL) || check_kw(KEYWORD_VAR)) {
         return parse_var_def();
     }
     if (check_kw(KEYWORD_IF)) {
-        return parse_if();
+        return parse_if(out);
     }
     if (check_kw(KEYWORD_WHILE)) {
         return parse_while();
     }
     if (check_kw(KEYWORD_RETURN)) {
+        out->all_return = true; // vetva konci return
+        out->all_unit = false;
         return parse_return();
     }
     if (check(TOKEN_TYPE_IDENTIFIER)) {
-        return parse_id_statement();
+        return parse_id_statement(out);
     }
 
     // Samostatne stojaci vyraz (napr. cislo)
     if (check(TOKEN_TYPE_INT_NUMBER) || check(TOKEN_TYPE_DOUBLE_NUMBER) ||
         check(TOKEN_TYPE_STRING) || check(TOKEN_TYPE_LEFT_PAREN)) {
-        return parse_expr_statement();
+        return parse_expr_statement(out);
     }
 
     // unarne +/- len za ;, riadok nesmie zacinat operatorom
     if (after_semicolon && (check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS))) {
-        return parse_expr_statement();
+        return parse_expr_statement(out);
     }
     return ERROR_SYNTAX;
 }
 
 // Spracovanie bloku prikazov ohraniceneho INDENT a DEDENT
-static int parse_block(Param *params, size_t param_count) {
+// out = vysledok posledneho prikazu priamo v bloku
+static int parse_block(Param *params, size_t param_count, StmtResult *out) {
     int res = expect(TOKEN_TYPE_INDENT);
     if (res != SCANNER_TOKEN_OK) return res;
 
@@ -959,7 +1001,7 @@ static int parse_block(Param *params, size_t param_count) {
         }
 
         has_statements = true;
-        res = parse_statement(); // ; spracuje prikaz
+        res = parse_statement(out); // ; spracuje prikaz, out prepise dalsi
         if (res != SCANNER_TOKEN_OK) goto cleanup;
     }
     if(!has_statements) {
@@ -1076,6 +1118,43 @@ error:
     return res;
 }
 
+// kontrola vysledku tela funkcie (2.3), pri funkcii bez typu ho odvodi do inferred
+static int check_body_result(const StmtResult *body, DataType return_type,
+                             bool explicit_type, bool explicit_unit, DataType *inferred) {
+    *inferred = return_type;
+
+    // explicitny Unit, hodnota sa zahodi
+    if (explicit_unit) return SCANNER_TOKEN_OK;
+
+    // telo konci if
+    if (body->ends_with_if) {
+        // s typom musia vsetky vetvy koncit return
+        if (explicit_type) return body->all_return ? SCANNER_TOKEN_OK : ERROR_SEM_TYPE;
+
+        // bez typu musia byt vsetky vetvy Unit
+        if (!body->all_unit) return ERROR_SEM_TYPE; // chyba 6
+        *inferred = TYPE_UNIT;
+        return SCANNER_TOKEN_OK;
+    }
+
+    // telo konci return, typ uz overil parse_return
+    if (body->all_return) return SCANNER_TOKEN_OK;
+
+    // neznamy typ volanej funkcie
+    if (body->type == TYPE_UNDEF) {
+        if (!explicit_type) *inferred = TYPE_UNDEF;
+        return SCANNER_TOKEN_OK;
+    }
+
+    if (explicit_type) {
+        return is_compatible(return_type, body->type) ? SCANNER_TOKEN_OK : ERROR_SEM_TYPE;
+    }
+
+    // bez typu: typ posledneho prikazu
+    *inferred = body->type;
+    return SCANNER_TOKEN_OK;
+}
+
 // Definicia funkcie: [ @main ] def id ( parametre ) : Typ = EOL INDENT blok DEDENT
 static int parse_function(bool is_main) {
 
@@ -1161,9 +1240,10 @@ static int parse_function(bool is_main) {
     }
 
     // pridanie do symtable (iba ak nie je z prveho priechodu)
+    Symbol *func_sym = existing_func;
     if (!is_from_first_pass) {
-        Symbol *sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, true, false);
-        if (!sym) {
+        func_sym = symtable_add_func(symtab, func_name, return_type, param_count, temp_params, true, false);
+        if (!func_sym) {
             free(func_name);
             free_params(temp_params, param_count);
             return ERROR_INTERNAL;
@@ -1185,7 +1265,25 @@ static int parse_function(bool is_main) {
             free_params(temp_params, param_count);
             return res;
         }
-        block_res = parse_block(temp_params, param_count);
+        StmtResult body;
+        block_res = parse_block(temp_params, param_count, &body);
+
+        // vysledok tela
+        if (block_res == SCANNER_TOKEN_OK) {
+            DataType inferred;
+            block_res = check_body_result(&body, return_type, explicit_type, explicit_unit, &inferred);
+
+            // @main bez typu musi mat vysledok Unit
+            if (block_res == SCANNER_TOKEN_OK && is_main && !explicit_type &&
+                inferred != TYPE_UNIT && inferred != TYPE_UNDEF) {
+                block_res = ERROR_SEM_TYPE; // chyba 6
+            }
+
+            // ulozenie odvodeneho typu
+            if (block_res == SCANNER_TOKEN_OK && !explicit_type && !is_main) {
+                func_sym->data.func.return_type = inferred;
+            }
+        }
     }
 
     // inak to je jednoriadkova funkcia
@@ -1226,7 +1324,9 @@ static int parse_function(bool is_main) {
             }
         }
 
-        
+        // ulozenie odvodeneho typu
+        if (!explicit_type && !is_main) func_sym->data.func.return_type = expr_type;
+
         block_res = expect(TOKEN_TYPE_EOL);
 
         symtable_pop_scope(symtab);

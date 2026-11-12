@@ -149,12 +149,14 @@ Posledná aktualizácia: 12. 11. 2026
 - [x] Boolean iba v podmienke `if` / `while` (inde chyba 6).
 - [x] Explicitný `Unit`: hodnota `return` a jednoriadkového tela sa zahodí.
 - [x] `return` vo funkcii bez explicitného návratového typu (6).
-- [ ] **Finding 4:** odvodený návratový typ funkcie sa neukladá do symtable a
-  funkciu bez typu nemožno správne volať pred jej definíciou (typ `TYPE_UNDEF`).
-- [ ] Výsledok viacriadkového tela sa nekontroluje (`parse_block` nevracia typ
-  posledného príkazu) – napr. `def f(): Int =` s telom `val x = 1` prejde,
-  `@main def run() =` s telom `5` prejde.
-- [ ] Pravidlá pre `if` na konci tela funkcie (Unit / všetky vetvy `return`).
+- [~] **Finding 4:** odvodený návratový typ sa ukladá do symtable (jedno- aj
+  viacriadkové telo); funkciu bez typu volanú **pred** jej definíciou treba ešte
+  analyzovať na požiadanie (O12, typ je zatiaľ `TYPE_UNDEF`).
+- [x] Výsledok bloku (`StmtResult`): posledný príkaz určuje výsledok tela,
+  definícia/priradenie/`while` = `Unit`; kontroluje sa aj nedosiahnuteľný kód.
+- [x] Pravidlá pre `if` na konci tela funkcie (explicitný `Unit` / všetky vetvy
+  `return` / bez typu a všetky vetvy `Unit`), rekurzívne pre vnorený `if`.
+- [x] `@main` bez typu musí mať výsledok tela `Unit`.
 - [ ] Rekurzia (priama aj nepriama) bez explicitného návratového typu (6) –
   zatiaľ sa nekontroluje.
 - [ ] Porovnanie `==` / `!=` dvoch hodnôt `Unit` vracia 6, špecifikácia
