@@ -70,6 +70,9 @@ static bool current_func_explicit_unit = false;
 // typ v hlavicke
 static bool current_func_explicit_type = false;
 
+// prikaz za ;
+static bool after_semicolon = false;
+
 // Uvolni stary token a nacita dalsi token zo scanneru
 static int next_token(void) {
     free_token_attribute(&current_tok);
@@ -118,7 +121,8 @@ static bool at_stmt_end(void) {
 
 // EOL alebo ;
 static int expect_stmt_end(void) {
-    if (check(TOKEN_TYPE_SEMICOLON)) return next_token();
+    after_semicolon = check(TOKEN_TYPE_SEMICOLON);
+    if (after_semicolon) return next_token();
     return expect(TOKEN_TYPE_EOL);
 }
 
@@ -866,8 +870,12 @@ static int parse_statement(void) {
 
     // Samostatne stojaci vyraz (napr. cislo)
     if (check(TOKEN_TYPE_INT_NUMBER) || check(TOKEN_TYPE_DOUBLE_NUMBER) ||
-        check(TOKEN_TYPE_STRING) || check(TOKEN_TYPE_LEFT_PAREN) ||
-        check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
+        check(TOKEN_TYPE_STRING) || check(TOKEN_TYPE_LEFT_PAREN)) {
+        return parse_expr_statement();
+    }
+
+    // unarne +/- len za ;, riadok nesmie zacinat operatorom
+    if (after_semicolon && (check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS))) {
         return parse_expr_statement();
     }
     return ERROR_SYNTAX;
@@ -891,9 +899,11 @@ static int parse_block(Param *params, size_t param_count) {
         }
     }
     bool has_statements = false;
+    after_semicolon = false; // novy riadok
 
     while (!check(TOKEN_TYPE_DEDENT) && !check(TOKEN_TYPE_EOF)) {
         if (check(TOKEN_TYPE_EOL)) {
+            after_semicolon = false; // novy riadok
             res = next_token();
             if (res != SCANNER_TOKEN_OK) goto cleanup;
             continue;

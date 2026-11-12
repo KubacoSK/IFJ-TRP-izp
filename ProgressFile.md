@@ -120,8 +120,8 @@ Posledná aktualizácia: 12. 11. 2026
   (`1 2 +`, `1 + * 2`, `x *` sú chyba 2).
 - [x] Zásobníky v `parse_expression` sú dynamické (`realloc`), hlboké výrazy
   (5000 zátvoriek) prejdú bez pretečenia, overené ASan aj valgrind.
-- [ ] Logický riadok nesmie začínať operátorom – príkaz `-x` alebo `+x` je
-  teraz prijatý (vetva PLUS/MINUS v `parse_statement`).
+- [x] Logický riadok nesmie začínať operátorom (`-x` na začiatku riadku je
+  chyba 2, za `;` na tom istom riadku je povolené).
 - [ ] Neznámy názov typu (`val a: Foo`, `a: Foo`, `): Foo`) vracia 2, podľa
   špecifikácie ide o nedefinovaný typ = chyba 3.
 - [~] Volanie funkcie vo výraze (`1 + f(x)`) a výraz/volanie v argumentoch sú
