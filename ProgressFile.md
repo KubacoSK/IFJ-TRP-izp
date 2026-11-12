@@ -116,8 +116,8 @@ Posledná aktualizácia: 12. 11. 2026
 - [x] Unárne `+`/`-` vrátane `-( ... )`.
 - [x] Vnorené zátvorky vo výrazoch (`((x))`, `1 + (2 * (3))`); prázdne `()`
   sa rozpozná podľa `expect_opd`.
-- [ ] Precedenčná analýza nekontroluje poradie operand/operátor –
-  `val a = 1 2 +` prejde s kódom 0.
+- [x] Precedenčná analýza kontroluje poradie operand/operátor
+  (`1 2 +`, `1 + * 2`, `x *` sú chyba 2).
 - [ ] Zásobníky v `parse_expression` majú pevnú veľkosť 100 bez kontroly –
   101+ vnorených zátvoriek = stack buffer overflow (overené ASan).
 - [ ] Logický riadok nesmie začínať operátorom – príkaz `-x` alebo `+x` je

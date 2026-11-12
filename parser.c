@@ -374,6 +374,9 @@ static int parse_expression(DataType *out_type) {
            current_tok.type == TOKEN_TYPE_STRING ||
            current_tok.type == TOKEN_TYPE_IDENTIFIER || is_unary) {
 
+            // operand za operandom
+            if (!expect_opd) return ERROR_SYNTAX;
+
             DataType t;
             int res = parse_term(&t); // nacitanie operandu
             if (res != SCANNER_TOKEN_OK) return res;
@@ -398,6 +401,12 @@ static int parse_expression(DataType *out_type) {
 
         // cudzia ) je koniec
         if (curr_op == TOKEN_TYPE_RIGHT_PAREN && open_parens == 0) curr_index = 12;
+
+        // chyba operand
+        if (expect_opd && curr_index != 10 && curr_index != 11) return ERROR_SYNTAX;
+
+        // ( za operandom
+        if (!expect_opd && curr_index == 10) return ERROR_SYNTAX;
 
         // ak sme na konci vyrazu ($), skoncime
         if(top_op == TOKEN_TYPE_EOL && curr_index == 12) {
