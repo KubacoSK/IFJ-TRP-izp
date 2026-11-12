@@ -118,8 +118,8 @@ Posledná aktualizácia: 12. 11. 2026
   sa rozpozná podľa `expect_opd`.
 - [x] Precedenčná analýza kontroluje poradie operand/operátor
   (`1 2 +`, `1 + * 2`, `x *` sú chyba 2).
-- [ ] Zásobníky v `parse_expression` majú pevnú veľkosť 100 bez kontroly –
-  101+ vnorených zátvoriek = stack buffer overflow (overené ASan).
+- [x] Zásobníky v `parse_expression` sú dynamické (`realloc`), hlboké výrazy
+  (5000 zátvoriek) prejdú bez pretečenia, overené ASan aj valgrind.
 - [ ] Logický riadok nesmie začínať operátorom – príkaz `-x` alebo `+x` je
   teraz prijatý (vetva PLUS/MINUS v `parse_statement`).
 - [ ] Neznámy názov typu (`val a: Foo`, `a: Foo`, `): Foo`) vracia 2, podľa
@@ -192,7 +192,7 @@ Posledná aktualizácia: 12. 11. 2026
 - [~] Build overený cez gcc 13 (WSL); treba ešte gcc 14+/clang 19+ (Merlin).
 - [ ] Overiť kompatibilitu s požiadavkami servera Merlin.
 - [~] Parser skontrolovaný cez `valgrind` na testovacích vstupoch – bez únikov
-  a neplatných prístupov; ASan odhalil overflow pri hlbokých zátvorkách.
+  a neplatných prístupov; overflow pri hlbokých zátvorkách (ASan) je opravený.
 - [ ] Pridať testy hraničných prípadov a regresné testy po každej väčšej zmene.
 - [x] Warning-free build s `-Wall -Wextra -pedantic -std=c99`.
 

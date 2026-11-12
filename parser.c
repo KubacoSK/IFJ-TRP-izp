@@ -15,7 +15,7 @@
 #include "symtable.h"
 #include "utils.h"
 
-#define MAX_EXPR_DEPTH 100
+#define EXPR_STACK_INIT 16 // zaciatocna velkost zasobnikov vyrazu
 
 // pomocna funkcia na ziskanie indexu pre precedencu tabulku
 // poradie podla hlavicky tabulky: + - * / < <= > >= == != ( ) $
@@ -344,17 +344,64 @@ static int reduce_operation(TokenType op, DataType left, DataType right, DataTyp
     return ERROR_SYNTAX;
 }
 
+// zasobniky vyrazu
+typedef struct {
+    TokenType *ops;
+    DataType *types;
+    int op_top;
+    int type_top;
+    int op_cap;
+    int type_cap;
+} ExprStack;
+
+// push operator
+static int push_op(ExprStack *s, TokenType op) {
+    if (s->op_top + 1 >= s->op_cap) {
+        int new_cap = s->op_cap * 2;
+        TokenType *tmp = realloc(s->ops, (size_t)new_cap * sizeof(TokenType));
+        if (!tmp) return ERROR_INTERNAL;
+        s->ops = tmp;
+        s->op_cap = new_cap;
+    }
+    s->ops[++s->op_top] = op;
+    return SCANNER_TOKEN_OK;
+}
+
+// push typ
+static int push_type(ExprStack *s, DataType type) {
+    if (s->type_top + 1 >= s->type_cap) {
+        int new_cap = s->type_cap * 2;
+        DataType *tmp = realloc(s->types, (size_t)new_cap * sizeof(DataType));
+        if (!tmp) return ERROR_INTERNAL;
+        s->types = tmp;
+        s->type_cap = new_cap;
+    }
+    s->types[++s->type_top] = type;
+    return SCANNER_TOKEN_OK;
+}
+
+static int parse_expression_inner(ExprStack *s, DataType *out_type);
+
 // precedencna analyza vyrazou
 static int parse_expression(DataType *out_type) {
+    ExprStack s = {NULL, NULL, -1, -1, EXPR_STACK_INIT, EXPR_STACK_INIT};
+    s.ops = malloc(EXPR_STACK_INIT * sizeof(TokenType));
+    s.types = malloc(EXPR_STACK_INIT * sizeof(DataType));
 
-    // zasobniky
-    TokenType op_stack[MAX_EXPR_DEPTH];
-    DataType type_stack[MAX_EXPR_DEPTH];
-    int op_top = -1;
-    int type_top = -1;
+    int res = ERROR_INTERNAL;
+    if (s.ops && s.types) res = parse_expression_inner(&s, out_type);
+
+    free(s.ops);
+    free(s.types);
+    return res;
+}
+
+// telo precedencnej analyzy, zasobniky uvolni volajuci
+static int parse_expression_inner(ExprStack *s, DataType *out_type) {
 
     // koniec vyrazu na spodok zasobnika ($)
-    op_stack[++op_top] = TOKEN_TYPE_EOL;
+    int res = push_op(s, TOKEN_TYPE_EOL);
+    if (res != SCANNER_TOKEN_OK) return res;
 
     // priznak, ci ocakavame operand
     bool expect_opd = true;
@@ -378,19 +425,20 @@ static int parse_expression(DataType *out_type) {
             if (!expect_opd) return ERROR_SYNTAX;
 
             DataType t;
-            int res = parse_term(&t); // nacitanie operandu
+            res = parse_term(&t); // nacitanie operandu
             if (res != SCANNER_TOKEN_OK) return res;
 
-            type_stack[++type_top] = t;
+            res = push_type(s, t);
+            if (res != SCANNER_TOKEN_OK) return res;
             expect_opd = false; // po operande uz ocakavame operator
-            continue; 
+            continue;
         }
 
         // ak je na vstupe operator (alebo koniec)
         TokenType curr_op = current_tok.type;
 
         // zistime co je na vrchu zasobnika
-        TokenType top_op = op_stack[op_top];
+        TokenType top_op = s->ops[s->op_top];
 
         // ziskame indexy pre precedencnu tabulku
         int top_index = get_op_index(top_op);
@@ -417,40 +465,42 @@ static int parse_expression(DataType *out_type) {
 
         if (action == '<') {
             // SHIFT: posunieme operator na zasobnik a precitame dalsi token
-            op_stack[++op_top] = curr_op;
+            res = push_op(s, curr_op);
+            if (res != SCANNER_TOKEN_OK) return res;
             if (curr_op == TOKEN_TYPE_LEFT_PAREN) open_parens++;
             expect_opd = true; // po operatori ocakavame operand
-            int res = next_token();
+            res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
         }
         else if (action == '=') {
             // MATCH: zahodine '(' zo zasobnika a precitame ')'
-            op_top--;
+            s->op_top--;
             open_parens--;
 
             // prazdne () = Unit
             if(expect_opd) {
-                type_stack[++type_top] = TYPE_UNIT;
+                res = push_type(s, TYPE_UNIT);
+                if (res != SCANNER_TOKEN_OK) return res;
             }
 
             expect_opd = false; // po uzatvoreni zatvorky mame hotovu hodnotu
-            int res = next_token();
+            res = next_token();
             if (res != SCANNER_TOKEN_OK) return res;
         }
         else if (action == '>') {
 
-            TokenType op = op_stack[op_top--]; // zobereme operator
-            if (type_top < 1) return ERROR_SYNTAX; // chyba, malo operandov
+            TokenType op = s->ops[s->op_top--]; // zobereme operator
+            if (s->type_top < 1) return ERROR_SYNTAX; // chyba, malo operandov
 
-            DataType right = type_stack[type_top--]; 
-            DataType left = type_stack[type_top--];
+            DataType right = s->types[s->type_top--];
+            DataType left = s->types[s->type_top--];
             DataType result;
-            
+
             // sematicka kontrola pre operator
-            int res = reduce_operation(op, left, right, &result);
+            res = reduce_operation(op, left, right, &result);
             if (res != SCANNER_TOKEN_OK) return res;
 
-            type_stack[++type_top] = result; // vysledok dame spat na zasobnik
+            s->types[++s->type_top] = result; // vysledok dame spat na zasobnik
             expect_opd = false; // vysledok redukcie je operand
         }
         else {
@@ -460,9 +510,9 @@ static int parse_expression(DataType *out_type) {
     }
 
     // prave jeden vysledny typ na zasobniku by mal ostat
-    if (type_top != 0) return ERROR_SYNTAX;
-    
-    *out_type = type_stack[0];
+    if (s->type_top != 0) return ERROR_SYNTAX;
+
+    *out_type = s->types[0];
     return SCANNER_TOKEN_OK;
 
 }
