@@ -126,6 +126,17 @@ static int expect_stmt_end(void) {
     return expect(TOKEN_TYPE_EOL);
 }
 
+// nazov typu, neznamy id = chyba 3
+static int parse_type(DataType *out) {
+    if (check_kw(KEYWORD_INT)) *out = TYPE_INT;
+    else if (check_kw(KEYWORD_DOUBLE)) *out = TYPE_DOUBLE;
+    else if (check_kw(KEYWORD_STRING)) *out = TYPE_STRING;
+    else if (check_kw(KEYWORD_UNIT)) *out = TYPE_UNIT;
+    else if (check(TOKEN_TYPE_IDENTIFIER)) return ERROR_SEM_UNDEF; // chyba 3
+    else return ERROR_SYNTAX;
+    return next_token();
+}
+
 // Prototypy pravidiel rekurzivneho zostupu
 static int parse_function(bool is_main);
 static int parse_params(Param **out_params, size_t *param_count);
@@ -555,16 +566,7 @@ static int parse_var_def(void) {
             return res;
         }
 
-        if(check_kw(KEYWORD_INT)) var_type = TYPE_INT;
-        else if(check_kw(KEYWORD_DOUBLE)) var_type = TYPE_DOUBLE;
-        else if(check_kw(KEYWORD_STRING)) var_type = TYPE_STRING;
-        else if(check_kw(KEYWORD_UNIT)) var_type = TYPE_UNIT;
-        else {
-            free(var_name);
-            return ERROR_SYNTAX;
-        }
-
-        res = next_token();
+        res = parse_type(&var_type);
         if(res != SCANNER_TOKEN_OK) {
             free(var_name);
             return res;
@@ -994,16 +996,7 @@ static int parse_params(Param **out_params, size_t *param_count) {
         if (res != SCANNER_TOKEN_OK) goto error;
 
         // typ parametra
-        if(check_kw(KEYWORD_INT)) params[count - 1].type = TYPE_INT;
-        else if(check_kw(KEYWORD_DOUBLE)) params[count - 1].type = TYPE_DOUBLE;
-        else if(check_kw(KEYWORD_STRING)) params[count - 1].type = TYPE_STRING;
-        else if(check_kw(KEYWORD_UNIT)) params[count - 1].type = TYPE_UNIT;
-        else {
-            res = ERROR_SYNTAX;
-            goto error;
-        }
-
-        res = next_token();
+        res = parse_type(&params[count - 1].type);
         if (res != SCANNER_TOKEN_OK) goto error;
 
         // ciarka alebo koniec
@@ -1087,17 +1080,7 @@ static int parse_function(bool is_main) {
             return res;
         }
 
-        if(check_kw(KEYWORD_INT)) return_type = TYPE_INT;
-        else if(check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
-        else if(check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
-        else if(check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
-        else {
-            free(func_name);
-            free_params(temp_params, param_count);
-            return ERROR_SYNTAX;
-        }
-
-        res = next_token();
+        res = parse_type(&return_type);
         if (res != SCANNER_TOKEN_OK) {
             free(func_name);
             free_params(temp_params, param_count);
@@ -1304,17 +1287,7 @@ int parse_headers(Symtable *st) {
                     return res;
                 }
 
-                if (check_kw(KEYWORD_INT)) return_type = TYPE_INT;
-                else if (check_kw(KEYWORD_DOUBLE)) return_type = TYPE_DOUBLE;
-                else if (check_kw(KEYWORD_STRING)) return_type = TYPE_STRING;
-                else if (check_kw(KEYWORD_UNIT)) return_type = TYPE_UNIT;
-                else {
-                    free(func_name);
-                    free_params(temp_params, param_count);
-                    return ERROR_SYNTAX;
-                }
-
-                res = next_token();
+                res = parse_type(&return_type);
                 if (res != SCANNER_TOKEN_OK) {
                     free(func_name);
                     free_params(temp_params, param_count);

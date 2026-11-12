@@ -122,8 +122,11 @@ Posledná aktualizácia: 12. 11. 2026
   (5000 zátvoriek) prejdú bez pretečenia, overené ASan aj valgrind.
 - [x] Logický riadok nesmie začínať operátorom (`-x` na začiatku riadku je
   chyba 2, za `;` na tom istom riadku je povolené).
-- [ ] Neznámy názov typu (`val a: Foo`, `a: Foo`, `): Foo`) vracia 2, podľa
-  špecifikácie ide o nedefinovaný typ = chyba 3.
+- [x] Neznámy názov typu (`val a: Foo`, `a: Foo`, `): Foo`) je chyba 3
+  (spoločná funkcia `parse_type`).
+- [ ] Scanner neberie `Boolean`, `case`, `class`, `extension`, `for`, `List`,
+  `match`, `type` ako kľúčové slová (špecifikácia: v základe je vhodné ich
+  neprijímať ako identifikátor, netestuje sa). `val a: Boolean` dnes vráti 3.
 - [~] Volanie funkcie vo výraze (`1 + f(x)`) a výraz/volanie v argumentoch sú
   prijímané – v základnom zadaní je to chyba, platné iba s rozšírením FUNEXP.
   Treba rozhodnúť, či FUNEXP implementujeme.
