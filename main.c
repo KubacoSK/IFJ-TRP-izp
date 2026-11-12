@@ -13,15 +13,8 @@
 #include "error.h"
 
 int main(void) {
-    // Vytvorenie docasneho suboru a skopirovanie stdin do neho
-    FILE *temp_file = tmpfile();
-    if (!temp_file) return ERROR_INTERNAL;
-
-    int c;
-    while ((c = getchar()) != EOF) {
-        fputc(c, temp_file);
-    }
-    rewind(temp_file);
+    // scanner cita priamo stdin, tokeny drzi parser v pamati
+    set_source_file(stdin);
 
     // Inicializacia tabulky symbolov
     Symtable st;
@@ -30,20 +23,17 @@ int main(void) {
     // Pridanie vstavanych funkcii
     symtable_add_builtins(&st);
 
-    // prvy priechod - zber hlaviciek funkcii
-    set_source_file(temp_file);
+    // prvy priechod - nacitanie tokenov a zber hlaviciek funkcii
     int result = parse_headers(&st);
 
     if(result == ERROR_OK) {
-        // druhy priechod - plna analyza tela funkcii
-        rewind(temp_file); // vratenie sa na zaciatok suboru
-        set_source_file(temp_file); // reset scannera
+        // druhy priechod - plna analyza tela funkcii nad polom tokenov
         result = parse_program(&st);
     }
 
     // Uvolnenie zdrojov
+    parser_free();
     symtable_free(&st);
-    fclose(temp_file);
 
     return result;
 }

@@ -18,4 +18,7 @@ int parse_headers(Symtable *st);
 // Vracia 0 pri uspechu, alebo chybovy kod (1, 2, 3, 4, 5, 6, 7, 10, 99)
 int parse_program(Symtable *st);
 
+// Uvolni pole tokenov, volat po oboch priechodoch (aj pri chybe)
+void parser_free(void);
+
 #endif // _PARSER_H

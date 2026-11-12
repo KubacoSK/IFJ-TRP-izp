@@ -56,7 +56,15 @@ static const char prec_table[13][13] = {
     {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', 'E', 'E'}  // $
 };
 
-static Token current_tok;
+// pole tokenov, naplni ho prvy priechod
+static Token *tokens = NULL;
+static size_t token_count = 0;
+static size_t token_cap = 0;
+static size_t pos = 0;                      // index aktualneho tokenu
+static int lex_error = SCANNER_TOKEN_OK;    // chyba na zarazke
+
+// aktualny token
+#define current_tok (tokens[pos])
 
 // Ukazovatel na tabulku symbolov
 static Symtable *symtab = NULL;
@@ -73,10 +81,54 @@ static bool current_func_explicit_type = false;
 // prikaz za ;
 static bool after_semicolon = false;
 
-// Uvolni stary token a nacita dalsi token zo scanneru
+// pridaj token do pola
+static int push_token(Token tok) {
+    if (token_count == token_cap) {
+        size_t new_cap = token_cap ? token_cap * 2 : 256;
+        Token *tmp = realloc(tokens, new_cap * sizeof(Token));
+        if (!tmp) {
+            free_token_attribute(&tok);
+            return ERROR_INTERNAL;
+        }
+        tokens = tmp;
+        token_cap = new_cap;
+    }
+    tokens[token_count++] = tok;
+    return SCANNER_TOKEN_OK;
+}
+
+// nacita cely vstup do pola, lexikalna chyba = zarazka na konci
+static int tokenize(void) {
+    while (1) {
+        Token tok;
+        int res = get_token(&tok);
+        if (res != SCANNER_TOKEN_OK) {
+            // chyba sa vrati az ked k nej parser dojde
+            lex_error = res;
+            Token stop = {.type = TOKEN_TYPE_EMPTY, .attribute = {.string = NULL}};
+            return push_token(stop);
+        }
+        res = push_token(tok);
+        if (res != SCANNER_TOKEN_OK) return res;
+        if (tok.type == TOKEN_TYPE_EOF) return SCANNER_TOKEN_OK;
+    }
+}
+
+// chyba na zarazke
+static int token_status(void) {
+    return tokens[pos].type == TOKEN_TYPE_EMPTY ? lex_error : SCANNER_TOKEN_OK;
+}
+
+// zaciatok priechodu
+static int first_token(void) {
+    pos = 0;
+    return token_status();
+}
+
+// Posun na dalsi token, na EOF a zarazke sa stoji
 static int next_token(void) {
-    free_token_attribute(&current_tok);
-    return get_token(&current_tok);
+    if (tokens[pos].type != TOKEN_TYPE_EOF && tokens[pos].type != TOKEN_TYPE_EMPTY) pos++;
+    return token_status();
 }
 
 // Zisti, ci ma aktualny token dany typ bez posunu
@@ -629,29 +681,24 @@ static int parse_expr_statement(void) {
 
 // prikaz s id
 static int parse_id_statement(void) {
-    // lookahead
-    Token next_tok;
-    int res = get_token(&next_tok);
-    if (res != SCANNER_TOKEN_OK) return res;
+    // lookahead, za id je vzdy aspon EOF alebo zarazka
+    TokenType next_type = tokens[pos + 1].type;
 
     // samotny vyraz
-    if (next_tok.type != TOKEN_TYPE_ASSIGN && next_tok.type != TOKEN_TYPE_LEFT_PAREN) {
-        // vratit token
-        res = unget_token(next_tok);
-        if (res != SCANNER_TOKEN_OK) return res;
+    if (next_type != TOKEN_TYPE_ASSIGN && next_type != TOKEN_TYPE_LEFT_PAREN) {
         return parse_expr_statement();
     }
 
     // ulozenie nazvu funkcie/premennej pre pouzitie
     char *id_name = str_dup(current_tok.attribute.string);
-    if (!id_name) {
-        free_token_attribute(&next_tok);
-        return ERROR_INTERNAL;
-    }
+    if (!id_name) return ERROR_INTERNAL;
 
     // posun za id
-    free_token_attribute(&current_tok);
-    current_tok = next_tok;
+    int res = next_token();
+    if (res != SCANNER_TOKEN_OK) {
+        free(id_name);
+        return res;
+    }
 
     // Priradenie do premennej: x = expr EOL
     if (check(TOKEN_TYPE_ASSIGN)) {
@@ -1224,8 +1271,13 @@ static int skip_block(void) {
 // Prvy priechod, zbieraju su hlavicky funkcii
 int parse_headers(Symtable *st) {
     symtab = st;
-    int res = next_token();
-    if (res != SCANNER_TOKEN_OK && res != TOKEN_TYPE_EOF) return res;
+
+    // cely vstup do pola tokenov
+    int res = tokenize();
+    if (res != SCANNER_TOKEN_OK) return res;
+
+    res = first_token();
+    if (res != SCANNER_TOKEN_OK) return res;
 
     while (!check(TOKEN_TYPE_EOF)) {
         if(check(TOKEN_TYPE_EOL)) {
@@ -1321,10 +1373,9 @@ int parse_program(Symtable *st) {
     symtab = st;
     int main_count = 0; // pocitadlo vyskytu @main
 
-    int res = next_token();
-    if (res != SCANNER_TOKEN_OK && res != TOKEN_TYPE_EOF) {
-        return res;
-    }
+    // druhy priechod od zaciatku pola
+    int res = first_token();
+    if (res != SCANNER_TOKEN_OK) return res;
 
     // preskocenie prazdnych riadkov na zaciatku
     while (check(TOKEN_TYPE_EOL)) {
@@ -1397,6 +1448,16 @@ int parse_program(Symtable *st) {
     // overime ci main vobec existoval
     if (main_count == 0) return ERROR_SEM_UNDEF; // Chyba 3: @main neexistuje
 
-    free_token_attribute(&current_tok);
     return ERROR_OK;
+}
+
+// uvolni pole tokenov
+void parser_free(void) {
+    for (size_t i = 0; i < token_count; i++) free_token_attribute(&tokens[i]);
+    free(tokens);
+    tokens = NULL;
+    token_count = 0;
+    token_cap = 0;
+    pos = 0;
+    lex_error = SCANNER_TOKEN_OK;
 }

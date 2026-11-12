@@ -39,9 +39,9 @@ Posledná aktualizácia: 12. 11. 2026
 - [x] Navrhnutie dátových štruktúr hash tabuľky a tabuľky symbolov.
 - [~] Základná modulárna architektúra existuje, treba ju ešte prepojiť s
   kompletným tokom parser -> sémantika -> generovanie kódu.
-- [ ] **`main.c` používa `tmpfile()` na kópiu stdin – zadanie zakazuje vytvárať
-  súbory (ani v `/tmp`).** Treba načítať vstup do pamäte (napr. pole tokenov
-  v 1. priechode, čo zároveň vyrieši finding 4).
+- [x] Bez `tmpfile()`: 1. priechod načíta všetky tokeny do poľa v pamäti
+  (lexikálna chyba ako zarážka, vráti sa až keď k nej parser dôjde),
+  2. priechod ide po tom istom poli. Scanner sa číta zo stdin iba raz.
 - [~] Jednotné vlastníctvo pamäte: parametre funkcií majú `free_params`,
   `parse_params` uvoľňuje pri chybe; pri chybe sa ešte neuvoľní `current_tok`
   a symbolová tabuľka v niektorých vetvách.
@@ -221,12 +221,10 @@ Posledná aktualizácia: 12. 11. 2026
 
 ## Odporúčané poradie ďalšej práce
 
-1. Odstrániť `tmpfile()` z `main.c` – načítať tokeny do pamäte v 1. priechode
-   (rieši zákaz vytvárania súborov aj finding 4).
-2. Opraviť chyby precedenčnej analýzy (vnorené zátvorky, poradie
-   operand/operátor, kontrola veľkosti zásobníka).
-3. Doplniť výsledok bloku a pravidlá návratovej hodnoty (posledný príkaz, `if`,
-   rekurzia).
+1. ~~Odstrániť `tmpfile()` – pole tokenov v pamäti.~~ Hotové.
+2. ~~Opraviť chyby precedenčnej analýzy.~~ Hotové.
+3. Doplniť výsledok bloku a pravidlá návratovej hodnoty (O11), potom analýzu
+   tela na požiadanie a graf volaní (O12, finding 4, rekurzia).
 4. Navrhnúť a implementovať generátor IFJcode26 – bez neho nepôjdu validné testy.
 5. Pridať end-to-end testy a skript do `tests/`.
 6. Spustiť build a testy na Merlin, `clang-format`, hlavičky súborov.
