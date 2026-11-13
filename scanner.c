@@ -465,7 +465,7 @@ int get_token(Token *token) {
     token->attribute.string = NULL;
     token->had_preceding_newline = false;
 
-    // 1. Vratenie tokenu zo zasobnika lookaheadu
+    // Vratenie tokenu zo zasobnika lookaheadu
     if (unget_top >= 0) {
         *token = unget_buf[unget_top--];
         if (token->type == TOKEN_TYPE_LEFT_PAREN) paren_depth++;
@@ -473,14 +473,14 @@ int get_token(Token *token) {
         return SCANNER_TOKEN_OK;
     }
 
-    // 2. Emitovanie cakajucich DEDENTov pri viacnasobnom skoku spat
+    // Emitovanie cakajucich DEDENTov pri viacnasobnom skoku spat
     if (pending_dedents > 0) {
         pending_dedents--;
         token->type = TOKEN_TYPE_DEDENT;
         return SCANNER_TOKEN_OK;
     }
 
-    // 3. Koniec suboru
+    // Koniec suboru
     if (eof_reached) return handle_eof(token);
 
     while (1) {
