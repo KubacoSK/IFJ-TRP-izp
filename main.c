@@ -13,17 +13,26 @@
 #include "error.h"
 
 int main(void) {
-    // Nastavenie citania zo standardneho vstupu
+    // scanner cita priamo stdin, tokeny drzi parser v pamati
     set_source_file(stdin);
 
     // Inicializacia tabulky symbolov
     Symtable st;
     symtable_init(&st);
 
-    // Spustenie syntaktickej a semantickej analyzy
-    int result = parse_program(&st);
+    // Pridanie vstavanych funkcii
+    symtable_add_builtins(&st);
+
+    // prvy priechod - nacitanie tokenov a zber hlaviciek funkcii
+    int result = parse_headers(&st);
+
+    if(result == ERROR_OK) {
+        // druhy priechod - plna analyza tela funkcii nad polom tokenov
+        result = parse_program(&st);
+    }
 
     // Uvolnenie zdrojov
+    parser_free();
     symtable_free(&st);
 
     return result;

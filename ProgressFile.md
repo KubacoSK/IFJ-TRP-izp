@@ -1,6 +1,6 @@
 # Progress projektu IFJ a IAL (variant TRP-izp)
 
-Posledná aktualizácia: 25. 10. 2026
+Posledná aktualizácia: 12. 11. 2026
 
 ## Legenda
 
@@ -10,32 +10,43 @@ Posledná aktualizácia: 25. 10. 2026
 
 ## Aktuálny stav
 
-- Základné C moduly už existujú: scanner, parser, hash tabuľka, tabuľka symbolov,
-  pomocné funkcie, chybové kódy a `main`.
-- Hash tabuľka a tabuľka symbolov majú samostatné unit testy.
-- Scanner má rozsiahlu testovaciu sadu pre tokeny, literály, komentáre, odsadenie
-  a lexikálne chyby.
-- Parser je zatiaľ iba základná kostra rekurzívneho zostupu. Vie spracovať
-  základnú štruktúru programu, funkcie, bloky, deklarácie, priradenia, volania,
-  `if`, `while` a `return`, ale nepokrýva celú gramatiku ani sémantiku.
-- Generovanie IFJcode26 zatiaľ nie je implementované.
-- Testy a build neboli v tomto prostredí overené, pretože nie sú dostupné
-  príkazy `make`, `gcc` ani `clang`.
+- Základné C moduly existujú: scanner, parser (syntax + sémantika v jednom
+  module), hash tabuľka, tabuľka symbolov, pomocné funkcie, chybové kódy a `main`.
+- Build bol overený v Linux prostredí (WSL Ubuntu, gcc 13.3) s
+  `-Wall -Wextra -pedantic -std=c99`, bez warningov.
+- Unit testy prechádzajú: scanner 56/56, hash tabuľka 26/26, tabuľka
+  symbolov 19/19 (`make test`).
+- Parser je dvojpriechodový: 1. priechod zbiera hlavičky funkcií, 2. priechod
+  analyzuje telá. Na vetve `SematickaAnalyza-parser` bolo opravených 9 z 10
+  nálezov z `REVIEW_FINDINGS.md` (finding 4 zatiaľ odložený).
+- Parser bol ručne otestovaný sadou ~90 malých IFJ26 programov s očakávanými
+  návratovými kódmi a cez `valgrind`; sada zatiaľ nie je v repozitári.
+- Generovanie IFJcode26 zatiaľ nie je implementované (vetva `CodeGenerator`
+  neobsahuje generátor).
+- **Pokusné odovzdanie je 19. 11. 2026** – bez generátora kódu prejdú iba
+  testy chybových návratových kódov.
 
 ## 1. Príprava a architektúra
 
-- [ ] Vytvorenie / nastavenie spoločného Git repozitára.
-- [ ] Dohodnutie pravidiel práce: Conventional Commits, pull requesty a code review.
+- [x] Vytvorenie / nastavenie spoločného Git repozitára.
+- [x] Dohodnutie pravidiel práce: Conventional Commits, pull requesty a code review.
 - [x] Vytvorenie základného `Makefile` s cieľmi `all`, `ifj26`, `test`,
   `test_scanner`, `test_ht`, `test_symtable` a `clean`.
-- [ ] Doplniť samostatné ciele `check` alebo `build-check`.
-- [ ] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory.
+- [x] Doplniť samostatné ciele `check` alebo `build-check`.
+- [ ] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory
+  (v repozitári chýba `.clang-format`, zadanie to vyžaduje povinne).
 - [x] Navrhnutie základných dátových štruktúr tokenov v `scanner.h`.
 - [x] Navrhnutie dátových štruktúr hash tabuľky a tabuľky symbolov.
 - [~] Základná modulárna architektúra existuje, treba ju ešte prepojiť s
   kompletným tokom parser -> sémantika -> generovanie kódu.
-- [ ] Doplniť jednotné vlastníctvo pamäte a pravidlá uvoľňovania pre všetky
-  nové štruktúry parsera a generátora.
+- [x] Bez `tmpfile()`: 1. priechod načíta všetky tokeny do poľa v pamäti
+  (lexikálna chyba ako zarážka, vráti sa až keď k nej parser dôjde),
+  2. priechod ide po tom istom poli. Scanner sa číta zo stdin iba raz.
+- [~] Jednotné vlastníctvo pamäte: parametre funkcií majú `free_params`,
+  `parse_params` uvoľňuje pri chybe; pri chybe sa ešte neuvoľní `current_tok`
+  a symbolová tabuľka v niektorých vetvách.
+- [ ] Hlavičky zdrojových súborov neobsahujú mená a loginy autorov
+  (zadanie 2.5 to vyžaduje).
 
 ## 2. Hash tabuľka a tabuľka symbolov (IAL)
 
@@ -48,7 +59,7 @@ Posledná aktualizácia: 25. 10. 2026
   `ht_clear`.
 - [x] Ošetrené kolízie, aktualizácia duplicitného kľúča a hrobčeky.
 - [x] Napísané unit testy pre inicializáciu, vkladanie, vyhľadávanie,
-  kolízie, mazanie a čistenie tabuľky.
+  kolízie, mazanie a čistenie tabuľky (26/26 prechádza).
 - [ ] Overiť správanie pri zaplnenej tabuľke a pri zlyhaní alokácie.
 
 ### Tabuľka symbolov
@@ -59,9 +70,11 @@ Posledná aktualizácia: 25. 10. 2026
 - [x] Implementované pridávanie a vyhľadávanie premenných a funkcií.
 - [x] Implementované zatienenie premenných vo vnorenom scope.
 - [x] Implementované uvoľnenie symbolov, parametrov a scope-ov.
-- [x] Napísané unit testy pre funkcie, premenné, scopes a zatienenie.
-- [ ] Rozhodnúť a implementovať správanie pri redefinícii v rovnakom scope
-  (aktuálne hash tabuľka duplicitný kľúč aktualizuje).
+- [x] Napísané unit testy pre funkcie, premenné, scopes a zatienenie (19/19).
+- [x] Redefinícia v rovnakom scope: rieši parser cez
+  `symtable_find_var_current_scope` pred vložením (chyba 4).
+- [x] Vstavané funkcie (`print`, `readLine`, `readInt`, `readDouble`, `toStr`,
+  `toInt`, `strLength`, `subStr`, `ord`, `chr`) sú vložené do tabuľky.
 - [ ] Doplniť testy pre chybové stavy a zlyhanie alokácie.
 
 ## 3. Lexikálna analýza / scanner
@@ -77,46 +90,92 @@ Posledná aktualizácia: 25. 10. 2026
 - [x] Podpora anotácie `@main`.
 - [x] Spracovanie komentárov vrátane vnorených blokových komentárov.
 - [x] Spracovanie odsadenia cez tokeny `INDENT` a `DEDENT`.
-- [x] Lookahead cez `unget_token`.
+- [x] Lookahead cez `unget_token` (využíva ho parser pri príkaze s identifikátorom).
+- [x] Príznak `had_preceding_newline` sa nastavuje (potrebné pre koncovú čiarku).
 - [x] Detekcia lexikálnych chýb a interných chýb alokácie.
-- [x] Unit testy scanneru pokrývajúce základné tokeny a chybové vstupy.
-- [ ] Spustiť testy na dostupnom Linux/Merlin prostredí.
+- [x] Unit testy scanneru pokrývajúce základné tokeny a chybové vstupy (56/56).
+- [x] Spustiť testy na Linux prostredí (WSL Ubuntu).
+- [ ] Overiť na serveri Merlin (gcc 14+/clang).
 - [ ] Doplniť regresné testy pre hraničné prípady čísel, komentárov,
-  odsadenia a konca súboru.
+  odsadenia, konca súboru a `had_preceding_newline`.
 
 ## 4. Syntaktická analýza / parser (Dominik)
 
-- [~] Základný rekurzívny zostup je implementovaný.
-- [~] Spracovanie programu, importov, funkcií a anotácie `@main`.
-- [~] Spracovanie parametrov a návratových typov funkcií.
-- [~] Spracovanie blokov cez `INDENT` / `DEDENT`.
-- [~] Spracovanie deklarácií `val` a `var`, priradení a jednoduchých volaní.
-- [~] Spracovanie `if ... then ... else`, `while ... do` a `return`.
-- [~] Jednoduché výrazy podporujú literály, identifikátory a volania funkcií.
-- [ ] Navrhnúť a skontrolovať kompletnú LL gramatiku podľa zadania.
-- [ ] Doplniť pravidlá pre všetky povolené typy príkazov a návratov.
-- [ ] Implementovať výrazy s operátormi `+`, `-`, `*`, `/` a porovnaniami.
-- [ ] Implementovať precedenčnú analýzu alebo ekvivalentné pravidlá priorít.
-- [ ] Doplniť zátvorkovanie, unárne operátory a kombinované výrazy podľa zadania.
-- [ ] Správne rozlíšiť kontext `@main` a bežných definícií funkcií.
-- [ ] Doplniť detekciu chýb na konci bloku, chýbajúcich častí a nadbytočných tokenov.
-- [ ] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi.
+- [x] Rekurzívny zostup, dvojpriechodový (hlavičky -> telá).
+- [x] Povinný prolog `import ifj26.*`, iba definície funkcií na najvyššej úrovni.
+- [x] Anotácia `@main` na rovnakom aj samostatnom riadku (oba priechody).
+- [x] Parametre a návratové typy funkcií, ľubovoľný počet parametrov
+  (dynamické pole namiesto `Param[20]`).
+- [x] Koncová čiarka v parametroch a argumentoch iba pred novým riadkom.
+- [x] Bloky cez `INDENT` / `DEDENT`, prázdny blok je chyba 2.
+- [x] `val` / `var`, priradenie, volanie funkcie ako príkaz.
+- [x] Samostatný výraz ako príkaz vrátane výrazu začínajúceho identifikátorom.
+- [x] Stredník ako oddeľovač príkazov na jednom logickom riadku.
+- [x] `if ... then ... else` (else povinné), `while ... do`, `return [výraz]`.
+- [x] Precedenčná analýza výrazov s `+ - * /`, relačnými operátormi a zátvorkami.
+- [x] Unárne `+`/`-` vrátane `-( ... )`.
+- [x] Vnorené zátvorky vo výrazoch (`((x))`, `1 + (2 * (3))`); prázdne `()`
+  sa rozpozná podľa `expect_opd`.
+- [x] Precedenčná analýza kontroluje poradie operand/operátor
+  (`1 2 +`, `1 + * 2`, `x *` sú chyba 2).
+- [x] Zásobníky v `parse_expression` sú dynamické (`realloc`), hlboké výrazy
+  (5000 zátvoriek) prejdú bez pretečenia, overené ASan aj valgrind.
+- [x] Logický riadok nesmie začínať operátorom (`-x` na začiatku riadku je
+  chyba 2, za `;` na tom istom riadku je povolené).
+- [x] Neznámy názov typu (`val a: Foo`, `a: Foo`, `): Foo`) je chyba 3
+  (spoločná funkcia `parse_type`).
+- [ ] Scanner neberie `Boolean`, `case`, `class`, `extension`, `for`, `List`,
+  `match`, `type` ako kľúčové slová (špecifikácia: v základe je vhodné ich
+  neprijímať ako identifikátor, netestuje sa). `val a: Boolean` dnes vráti 3.
+- [~] Volanie funkcie vo výraze (`1 + f(x)`) a výraz/volanie v argumentoch sú
+  prijímané – v základnom zadaní je to chyba, platné iba s rozšírením FUNEXP.
+  Treba rozhodnúť, či FUNEXP implementujeme.
+- [ ] Navrhnúť a zdokumentovať kompletnú LL gramatiku a LL tabuľku.
+- [~] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi
+  (existujú lokálne, treba ich pridať do `tests/` a skriptu).
 
 ## 5. Sémantická analýza (Dominik)
 
-- [~] Dátové štruktúry tabuľky symbolov už obsahujú typy, parametre,
-  inicializáciu, konštanty a príznaky definície funkcie.
-- [ ] Prepojiť pridávanie funkcií a premenných z parsera do tabuľky symbolov.
-- [ ] Kontrolovať definovanie premennej/funkcie pred použitím.
-- [ ] Kontrolovať redefiníciu premennej alebo funkcie.
-- [ ] Kontrolovať inicializáciu premennej pred čítaním.
-- [ ] Implementovať typovú kontrolu výrazov a priradení.
-- [ ] Kontrolovať zápis do `val` a ďalších nemenných identifikátorov.
-- [ ] Kontrolovať počet a typy argumentov pri volaní funkcie.
-- [ ] Kontrolovať návratový typ a platnosť príkazu `return`.
-- [ ] Overiť povinnosť a jedinečnosť `@main`.
-- [ ] Doplniť testy všetkých sémantických chybových kódov `3`, `4`, `5`, `6`,
-  `7` a `10`.
+- [x] Prepojenie parsera s tabuľkou symbolov pre funkcie, parametre a premenné.
+- [x] Nedefinovaná premenná/funkcia (3), redefinícia premennej/funkcie (4).
+- [x] Duplicitné mená parametrov (4).
+- [x] Inicializácia je povinná syntakticky, čítanie neinicializovanej premennej
+  nemôže nastať.
+- [x] Typová kontrola výrazov, inicializácie a priradení vrátane `Int -> Double`.
+- [x] Zápis do `val` a do parametra (7).
+- [x] Počet a typy argumentov pri volaní vstavaných aj užívateľských funkcií (5).
+- [x] `@main`: chýbajúci (3), viacnásobný (4), s parametrami (5),
+  iný návratový typ ako `Unit` (6).
+- [x] Boolean iba v podmienke `if` / `while` (inde chyba 6).
+- [x] Explicitný `Unit`: hodnota `return` a jednoriadkového tela sa zahodí.
+- [x] `return` vo funkcii bez explicitného návratového typu (6).
+- [x] **Finding 4:** odvodený návratový typ sa ukladá do symtable; funkcia bez
+  typu volaná pred definíciou sa analyzuje na požiadanie (skok v poli tokenov,
+  bez prístupu k lokálnym premenným volajúceho, potom sa v poradí preskočí).
+- [x] Rekurzia bez typu v hlavičke (6): priama/vzájomná počas analýzy (stav
+  „prebieha“), nepriama cez funkciu s typom cez graf volaní (DFS na konci).
+- [ ] Parser pri analýze na požiadanie priamo mení `symtab->current_scope`
+  (Symtable nie je skrytý ADT). Na obhajobu by bolo čistejšie pridať do
+  `symtable` funkciu na odpojenie/obnovenie rozsahov – rozhodnúť v tíme
+  (pozor: AI sa pri implementácii vyhľadávacej štruktúry nesmie použiť).
+- [x] Výsledok bloku (`StmtResult`): posledný príkaz určuje výsledok tela,
+  definícia/priradenie/`while` = `Unit`; kontroluje sa aj nedosiahnuteľný kód.
+- [x] Pravidlá pre `if` na konci tela funkcie (explicitný `Unit` / všetky vetvy
+  `return` / bez typu a všetky vetvy `Unit`), rekurzívne pre vnorený `if`.
+- [x] `@main` bez typu musí mať výsledok tela `Unit`.
+- [ ] Porovnanie `==` / `!=` dvoch hodnôt `Unit` vracia 6, špecifikácia
+  povoľuje porovnanie hodnôt rovnakého typu.
+- [ ] Overiť na fóre: chyba 6 vs. 10 pre nepovolený `return` (samostatný
+  `return` mimo `Unit`, `return` vo funkcii bez typu).
+- [ ] Overiť na fóre: zreťazenie relačných operátorov (`1 < 2 < 3`) teraz
+  vracia 6, môže sa očakávať 2.
+- [ ] Overiť: `val x` v tele funkcie s parametrom `x` vracia 4 (parametre sú
+  v rovnakom scope ako telo), Scala to povoľuje.
+- [ ] Poradie chýb medzi priechodmi: 1. priechod hlási chyby hlavičiek skôr, než
+  2. priechod skontroluje prolog (napr. chýbajúci prolog + duplicitná funkcia
+  vráti 4 namiesto 2).
+- [~] Testy sémantických chybových kódov `3`, `4`, `5`, `6`, `7` existujú
+  lokálne; kód `10` zatiaľ nikde nevzniká.
 
 ## 6. Generovanie cieľového kódu IFJcode26 (Jakub)
 
@@ -127,7 +186,7 @@ Posledná aktualizácia: 25. 10. 2026
 - [ ] Implementovať generovanie výrazov a konverzií typov.
 - [ ] Implementovať generovanie volaní funkcií a návratových hodnôt.
 - [ ] Implementovať generovanie `if` / `else` a `while` cez návestia a skoky.
-- [ ] Implementovať požadované vstavané funkcie.
+- [ ] Implementovať požadované vstavané funkcie (vrátane chyby 40 pri `subStr`).
 - [ ] Otestovať výstup cez referenčný interpret IFJcode26.
 - [ ] Overiť, že diagnostika ide na `stderr` a generovaný kód na `stdout`.
 
@@ -136,21 +195,25 @@ Posledná aktualizácia: 25. 10. 2026
 - [x] Existujú unit testy hash tabuľky, tabuľky symbolov a scanneru.
 - [ ] Doplniť end-to-end testovací skript pre preklad a návratové kódy.
 - [ ] Pridať validné vstupy s očakávaným výstupom.
-- [ ] Pridať lexikálne, syntaktické a sémantické chybové vstupy.
+- [~] Lexikálne, syntaktické a sémantické chybové vstupy existujú lokálne,
+  treba ich pridať do `tests/`.
 - [ ] Pridať testy generovaného IFJcode26.
-- [ ] Spustiť testy cez `gcc` aj `clang`.
+- [~] Build overený cez gcc 13 (WSL); treba ešte gcc 14+/clang 19+ (Merlin).
 - [ ] Overiť kompatibilitu s požiadavkami servera Merlin.
-- [ ] Skontrolovať úniky pamäte cez `valgrind` alebo dostupný ekvivalent.
+- [~] Parser skontrolovaný cez `valgrind` na testovacích vstupoch – bez únikov
+  a neplatných prístupov; overflow pri hlbokých zátvorkách (ASan) je opravený.
 - [ ] Pridať testy hraničných prípadov a regresné testy po každej väčšej zmene.
-- [ ] Overiť warning-free build s `-Wall -Wextra -pedantic -std=c99`.
+- [x] Warning-free build s `-Wall -Wextra -pedantic -std=c99`.
 
 ## 8. Dokumentácia a odovzdanie
 
 - [~] Zdrojové súbory obsahujú základné komentáre k verejným rozhraniam.
 - [ ] Priebežne zapisovať použitie AI podľa požiadaviek predmetu.
-- [ ] Vytvoriť súbor `rozdeleni` podľa špecifikácie.
+- [ ] Vytvoriť súbor `rozdeleni` (LF konce riadkov, súčet 100 %).
+- [ ] Vytvoriť súbor `rozsireni` (identifikátory rozšírení, LF konce riadkov).
 - [ ] Dokončiť `dokumentace.pdf`:
-  - [ ] Úvodná strana, členovia tímu a rozdelenie práce.
+  - [ ] Úvodná strana, členovia tímu, varianta, rozdelenie bodov, rozšírenia,
+    odkaz na repozitár.
   - [ ] Diagram architektúry a dátových tokov.
   - [ ] Diagram konečného automatu scanneru.
   - [ ] LL gramatika/tabuľka a precedenčná tabuľka.
@@ -159,14 +222,16 @@ Posledná aktualizácia: 25. 10. 2026
 - [ ] Doplniť a aktualizovať `README.md` o build, testy a použitie prekladača.
 - [ ] Spustiť `is_it_ok.sh` nad finálnym archívom.
 - [ ] Skontrolovať obsah archívu a odstrániť objektové, dočasné a testovacie súbory.
-- [ ] **POKUSNÉ ODOVZDANIE** do 19. novembra 2026.
+- [ ] **POKUSNÉ ODOVZDANIE** do 19. novembra 2026 23:59:59.
 - [ ] **FINÁLNE ODOVZDANIE** do 27. novembra 2026 11:59:59.
 
 ## Odporúčané poradie ďalšej práce
 
-1. Dokončiť gramatiku, výrazy a parserové testy.
-2. Prepojiť parser so symbolovou tabuľkou a doplniť sémantické kontroly.
-3. Navrhnúť a implementovať generátor IFJcode26.
-4. Pridať end-to-end testy a referenčné výstupy.
-5. Spustiť build, testy, sanitizéry a kontroly na Merlin/Linuxe.
-6. Dokončiť dokumentáciu, odovzdávací skript a finálny archív.
+1. ~~Odstrániť `tmpfile()` – pole tokenov v pamäti.~~ Hotové.
+2. ~~Opraviť chyby precedenčnej analýzy.~~ Hotové.
+3. ~~Výsledok bloku, pravidlá návratovej hodnoty (O11), analýza na požiadanie
+   a graf volaní (O12, finding 4).~~ Hotové.
+4. Navrhnúť a implementovať generátor IFJcode26 – bez neho nepôjdu validné testy.
+5. Pridať end-to-end testy a skript do `tests/`.
+6. Spustiť build a testy na Merlin, `clang-format`, hlavičky súborov.
+7. Dokončiť dokumentáciu, `rozdeleni`, `rozsireni`, `is_it_ok.sh` a archív.

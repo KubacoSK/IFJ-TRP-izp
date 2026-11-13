@@ -19,7 +19,8 @@ typedef enum {
     TYPE_DOUBLE,        // Desatinne cislo (Double)
     TYPE_STRING,        // Retazec (String)
     TYPE_UNIT,          // Prazdny navratovy typ (Unit)
-    TYPE_ANY            // Zastupny typ pre lubovolnu hodnotu
+    TYPE_ANY,           // Zastupny typ pre lubovolnu hodnotu
+    TYPE_BOOL           // Pravdivostna hodnota (Boolean) len pre podmienky
 } DataType;
 
 // Druh symbolu
@@ -101,5 +102,8 @@ Symbol *symtable_find_func(const Symtable *st, const char *name);
 
 // Prevod DataType na citatelny retazec (pre ladenie a chybove hlasky)
 const char *datatype_to_string(DataType type);
+
+// Pridanie vstavanych funkcii do tabulky symbolov
+void symtable_add_builtins(Symtable *st);
 
 #endif // _SYMTABLE_H
