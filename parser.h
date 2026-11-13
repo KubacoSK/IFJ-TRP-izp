@@ -10,8 +10,8 @@
 
 #include "symtable.h"
 
-// Hlavna funkcia syntaktickej analyzy: spracuje hlavicky vsetkych funkcii do tabulky symbolov
-// Tym umozni volat funkcie pred ich lexikalnou definiciou
+// Hlavna funkcia syntaktickej analyzy: spracuje hlavicky vsetkych funkcii do
+// tabulky symbolov Tym umozni volat funkcie pred ich lexikalnou definiciou
 int parse_headers(Symtable *st);
 
 // Hlavna funkcia syntaktickej analyzy: spracuje cely program zo vstupu
