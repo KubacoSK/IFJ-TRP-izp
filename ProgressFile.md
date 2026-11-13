@@ -1,6 +1,6 @@
 # Progress projektu IFJ a IAL (variant TRP-izp)
 
-Posledná aktualizácia: 12. 11. 2026
+Posledná aktualizácia: 13. 11. 2026
 
 ## Legenda
 
@@ -18,7 +18,12 @@ Posledná aktualizácia: 12. 11. 2026
   symbolov 19/19 (`make test`).
 - Parser je dvojpriechodový: 1. priechod zbiera hlavičky funkcií, 2. priechod
   analyzuje telá. Na vetve `SematickaAnalyza-parser` bolo opravených 9 z 10
-  nálezov z `REVIEW_FINDINGS.md` (finding 4 zatiaľ odložený).
+  nálezov z `REVIEW_FINDINGS.md` (finding 4 zatiaľ odložený). Vetva je
+  zlúčená do `main` (PR #3).
+- Formátovanie: v `main` je `.clang-format` s čistým štýlom LLVM. Všetky
+  zdrojové súbory sú preformátované na vetve `formatovanie-llvm` (14 súborov,
+  build bez warningov, unit testy prechádzajú rovnako ako predtým); vetvu
+  treba ešte commitnúť a zlúčiť cez PR.
 - Parser bol ručne otestovaný sadou ~90 malých IFJ26 programov s očakávanými
   návratovými kódmi a cez `valgrind`; sada zatiaľ nie je v repozitári.
 - Generovanie IFJcode26 zatiaľ nie je implementované (vetva `CodeGenerator`
@@ -33,8 +38,10 @@ Posledná aktualizácia: 12. 11. 2026
 - [x] Vytvorenie základného `Makefile` s cieľmi `all`, `ifj26`, `test`,
   `test_scanner`, `test_ht`, `test_symtable` a `clean`.
 - [x] Doplniť samostatné ciele `check` alebo `build-check`.
-- [ ] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory
-  (v repozitári chýba `.clang-format`, zadanie to vyžaduje povinne).
+- [~] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory (zadanie 2.5
+  to vyžaduje povinne): `.clang-format` (LLVM bez úprav) je v `main`, kód je
+  preformátovaný na vetve `formatovanie-llvm`, treba ju zlúčiť. Odvtedy musí
+  každý formátovať pred commitom (VS Code: Shift+Alt+F alebo Format On Save).
 - [x] Navrhnutie základných dátových štruktúr tokenov v `scanner.h`.
 - [x] Navrhnutie dátových štruktúr hash tabuľky a tabuľky symbolov.
 - [~] Základná modulárna architektúra existuje, treba ju ešte prepojiť s
@@ -204,6 +211,11 @@ Posledná aktualizácia: 12. 11. 2026
   a neplatných prístupov; overflow pri hlbokých zátvorkách (ASan) je opravený.
 - [ ] Pridať testy hraničných prípadov a regresné testy po každej väčšej zmene.
 - [x] Warning-free build s `-Wall -Wextra -pedantic -std=c99`.
+- [x] Pomenovanie je jednotné: funkcie a premenné `slovo_slovo`, typy
+  `PascalCase`, konštanty a makrá `VELKE_PISMENA`.
+- [ ] Drobné výnimky v pomenovaní: `Token_type` (nepoužitý alias) a
+  `Token_attribute` v `scanner.h`, lokálne `p_toStr`, `p_toInt`,
+  `p_strLength`, `p_subStr` v `symtable.c`, makro `current_tok` v `parser.c`.
 
 ## 8. Dokumentácia a odovzdanie
 
@@ -219,6 +231,7 @@ Posledná aktualizácia: 12. 11. 2026
   - [ ] LL gramatika/tabuľka a precedenčná tabuľka.
   - [ ] Popis tabuľky symbolov a generovania kódu.
   - [ ] Zhodnotenie použitia AI a rozdelenia práce.
+  - [ ] Uviesť štýl formátovania kódu (`clang-format`, LLVM).
 - [ ] Doplniť a aktualizovať `README.md` o build, testy a použitie prekladača.
 - [ ] Spustiť `is_it_ok.sh` nad finálnym archívom.
 - [ ] Skontrolovať obsah archívu a odstrániť objektové, dočasné a testovacie súbory.
@@ -233,5 +246,6 @@ Posledná aktualizácia: 12. 11. 2026
    a graf volaní (O12, finding 4).~~ Hotové.
 4. Navrhnúť a implementovať generátor IFJcode26 – bez neho nepôjdu validné testy.
 5. Pridať end-to-end testy a skript do `tests/`.
-6. Spustiť build a testy na Merlin, `clang-format`, hlavičky súborov.
+6. Zlúčiť vetvu `formatovanie-llvm` (`clang-format`), spustiť build a testy na
+   Merlin, doplniť hlavičky súborov.
 7. Dokončiť dokumentáciu, `rozdeleni`, `rozsireni`, `is_it_ok.sh` a archív.
