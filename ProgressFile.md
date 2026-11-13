@@ -21,9 +21,8 @@ Posledná aktualizácia: 13. 11. 2026
   nálezov z `REVIEW_FINDINGS.md` (finding 4 zatiaľ odložený). Vetva je
   zlúčená do `main` (PR #3).
 - Formátovanie: v `main` je `.clang-format` s čistým štýlom LLVM. Všetky
-  zdrojové súbory sú preformátované na vetve `formatovanie-llvm` (14 súborov,
-  build bez warningov, unit testy prechádzajú rovnako ako predtým); vetvu
-  treba ešte commitnúť a zlúčiť cez PR.
+  zdrojové súbory sú preformátované a zmeny sú zlúčené do `main`; build bez
+  warningov a unit testy prechádzajú rovnako ako predtým.
 - Parser bol ručne otestovaný sadou ~90 malých IFJ26 programov s očakávanými
   návratovými kódmi a cez `valgrind`; sada zatiaľ nie je v repozitári.
 - Generovanie IFJcode26 zatiaľ nie je implementované (vetva `CodeGenerator`
