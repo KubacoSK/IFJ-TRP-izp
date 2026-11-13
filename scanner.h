@@ -8,79 +8,79 @@
 #ifndef _SCANNER_H
 #define _SCANNER_H
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /**
  * @enum Rezervovane klucove slova pre IFJ26
  */
 typedef enum {
-    KEYWORD_DEF,        // def
-    KEYWORD_DO,         // do
-    KEYWORD_DOUBLE,     // Double
-    KEYWORD_ELSE,       // else
-    KEYWORD_IF,         // if
-    KEYWORD_IMPORT,     // import
-    KEYWORD_INT,        // Int
-    KEYWORD_RETURN,     // return
-    KEYWORD_STRING,     // String
-    KEYWORD_THEN,       // then
-    KEYWORD_UNIT,       // Unit
-    KEYWORD_VAL,        // val
-    KEYWORD_VAR,        // var
-    KEYWORD_WHILE       // while
+  KEYWORD_DEF,    // def
+  KEYWORD_DO,     // do
+  KEYWORD_DOUBLE, // Double
+  KEYWORD_ELSE,   // else
+  KEYWORD_IF,     // if
+  KEYWORD_IMPORT, // import
+  KEYWORD_INT,    // Int
+  KEYWORD_RETURN, // return
+  KEYWORD_STRING, // String
+  KEYWORD_THEN,   // then
+  KEYWORD_UNIT,   // Unit
+  KEYWORD_VAL,    // val
+  KEYWORD_VAR,    // var
+  KEYWORD_WHILE   // while
 } Keyword;
 
 /**
  * @enum Typ tokenu pre IFJ26.
  */
 typedef enum {
-    TOKEN_TYPE_EOF,             // Koniec suboru
-    TOKEN_TYPE_EOL,             // Koniec logickeho riadku
-    TOKEN_TYPE_INDENT,          // Zvysenie urovne odsadenia (zaciatok bloku)
-    TOKEN_TYPE_DEDENT,          // Znizenie urovne odsadenia (koniec bloku)
-    TOKEN_TYPE_EMPTY,           // Prazdny / neinicializovany
+  TOKEN_TYPE_EOF,    // Koniec suboru
+  TOKEN_TYPE_EOL,    // Koniec logickeho riadku
+  TOKEN_TYPE_INDENT, // Zvysenie urovne odsadenia (zaciatok bloku)
+  TOKEN_TYPE_DEDENT, // Znizenie urovne odsadenia (koniec bloku)
+  TOKEN_TYPE_EMPTY,  // Prazdny / neinicializovany
 
-    // Identifikatory a literaly
-    TOKEN_TYPE_IDENTIFIER,      // Identifikator (foo, _bar, x1)
-    TOKEN_TYPE_KEYWORD,         // Klucove slovo (z enum Keyword)
-    TOKEN_TYPE_UNDERSCORE,      // Samostatne podtrzitko '_'
-    TOKEN_TYPE_INT_NUMBER,      // Celociselny literal (123, 1_000_000)
-    TOKEN_TYPE_DOUBLE_NUMBER,   // Desatinny literal (12.34, 1.2e-3, .5, 12e3, 1.5d)
-    TOKEN_TYPE_STRING,          // Retazcovy literal ("..." alebo """...""")
+  // Identifikatory a literaly
+  TOKEN_TYPE_IDENTIFIER,    // Identifikator (foo, _bar, x1)
+  TOKEN_TYPE_KEYWORD,       // Klucove slovo (z enum Keyword)
+  TOKEN_TYPE_UNDERSCORE,    // Samostatne podtrzitko '_'
+  TOKEN_TYPE_INT_NUMBER,    // Celociselny literal (123, 1_000_000)
+  TOKEN_TYPE_DOUBLE_NUMBER, // Desatinny literal (12.34, 1.2e-3, .5, 12e3, 1.5d)
+  TOKEN_TYPE_STRING,        // Retazcovy literal ("..." alebo """...""")
 
-    // Anotacia
-    TOKEN_TYPE_MAIN,            // Anotacia @main
+  // Anotacia
+  TOKEN_TYPE_MAIN, // Anotacia @main
 
-    // Operatory
-    TOKEN_TYPE_PLUS,            // +
-    TOKEN_TYPE_MINUS,           // -
-    TOKEN_TYPE_MUL,             // *
-    TOKEN_TYPE_DIV,             // /
+  // Operatory
+  TOKEN_TYPE_PLUS,  // +
+  TOKEN_TYPE_MINUS, // -
+  TOKEN_TYPE_MUL,   // *
+  TOKEN_TYPE_DIV,   // /
 
-    // Porovnavacie operatory
-    TOKEN_TYPE_EQ,              // ==
-    TOKEN_TYPE_NEQ,             // !=
-    TOKEN_TYPE_LT,              // <
-    TOKEN_TYPE_LEQ,             // <=
-    TOKEN_TYPE_GT,              // >
-    TOKEN_TYPE_GEQ,             // >=
+  // Porovnavacie operatory
+  TOKEN_TYPE_EQ,  // ==
+  TOKEN_TYPE_NEQ, // !=
+  TOKEN_TYPE_LT,  // <
+  TOKEN_TYPE_LEQ, // <=
+  TOKEN_TYPE_GT,  // >
+  TOKEN_TYPE_GEQ, // >=
 
-    // Priradenie
-    TOKEN_TYPE_ASSIGN,          // =
+  // Priradenie
+  TOKEN_TYPE_ASSIGN, // =
 
-    // Oddelovace a interpunkcia
-    TOKEN_TYPE_LEFT_PAREN,      // (
-    TOKEN_TYPE_RIGHT_PAREN,     // )
-    TOKEN_TYPE_COMMA,           // ,
-    TOKEN_TYPE_DOT,             // .
-    TOKEN_TYPE_COLON,           // :
-    TOKEN_TYPE_SEMICOLON,       // ;
+  // Oddelovace a interpunkcia
+  TOKEN_TYPE_LEFT_PAREN,  // (
+  TOKEN_TYPE_RIGHT_PAREN, // )
+  TOKEN_TYPE_COMMA,       // ,
+  TOKEN_TYPE_DOT,         // .
+  TOKEN_TYPE_COLON,       // :
+  TOKEN_TYPE_SEMICOLON,   // ;
 
-    // Aliasy pre kompatibilitu
-    TOKEN_TYPE_LEFT_BRACKET = TOKEN_TYPE_LEFT_PAREN,
-    TOKEN_TYPE_RIGHT_BRACKET = TOKEN_TYPE_RIGHT_PAREN
+  // Aliasy pre kompatibilitu
+  TOKEN_TYPE_LEFT_BRACKET = TOKEN_TYPE_LEFT_PAREN,
+  TOKEN_TYPE_RIGHT_BRACKET = TOKEN_TYPE_RIGHT_PAREN
 } TokenType;
 
 typedef TokenType Token_type;
@@ -89,19 +89,19 @@ typedef TokenType Token_type;
  * @union Atribut tokenu.
  */
 typedef union {
-    char *string;           // Hodnota retazca alebo identifikatora
-    int64_t integer;        // Hodnota celeho cisla
-    Keyword keyword;        // Hodnota klucoveho slova
-    double decimal;         // Hodnota desatinneho cisla
+  char *string;    // Hodnota retazca alebo identifikatora
+  int64_t integer; // Hodnota celeho cisla
+  Keyword keyword; // Hodnota klucoveho slova
+  double decimal;  // Hodnota desatinneho cisla
 } Token_attribute;
 
 /**
  * @struct Reprezentacia tokenu.
  */
 typedef struct {
-    TokenType type;             // Typ tokenu
-    Token_attribute attribute;   // Atribut tokenu
-    bool had_preceding_newline; // Priznak, ci tokenu predchadzal novy riadok
+  TokenType type;             // Typ tokenu
+  Token_attribute attribute;  // Atribut tokenu
+  bool had_preceding_newline; // Priznak, ci tokenu predchadzal novy riadok
 } Token;
 
 /**

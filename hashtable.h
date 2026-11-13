@@ -8,30 +8,30 @@
 #ifndef _HASHTABLE_H
 #define _HASHTABLE_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
-//Fixna kapacita tabulky
+// Fixna kapacita tabulky
 
 #define HT_CAPACITY 2039
 
-//Stav slotu v tabulke
+// Stav slotu v tabulke
 
 typedef enum {
-    HT_SLOT_EMPTY = 0,      // Prazdny slot
-    HT_SLOT_OCCUPIED,       // Obsadeny slot s aktivnym klucom a hodnotou
-    HT_SLOT_DELETED         // Zmazany slot
+  HT_SLOT_EMPTY = 0, // Prazdny slot
+  HT_SLOT_OCCUPIED,  // Obsadeny slot s aktivnym klucom a hodnotou
+  HT_SLOT_DELETED    // Zmazany slot
 } HTSlotState;
 
 typedef struct {
-    char *key;              // Dynamicky alokovany retazec kluca
-    void *value;            // Ukazovatel na lubovolne data
-    HTSlotState state;      // Stav slotu
+  char *key;         // Dynamicky alokovany retazec kluca
+  void *value;       // Ukazovatel na lubovolne data
+  HTSlotState state; // Stav slotu
 } HTItem;
 
 typedef struct {
-    HTItem items[HT_CAPACITY];
-    size_t count;           // Pocet aktivnych obsadenych prvkov
+  HTItem items[HT_CAPACITY];
+  size_t count; // Pocet aktivnych obsadenych prvkov
 } HashTable;
 
 // Vypocita hash pre dany kluc (algoritmus djb2)

@@ -5,35 +5,35 @@
  * @brief Vstupny bod prekladaca IFJ26.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "error.h"
+#include "parser.h"
 #include "scanner.h"
 #include "symtable.h"
-#include "parser.h"
-#include "error.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 int main(void) {
-    // scanner cita priamo stdin, tokeny drzi parser v pamati
-    set_source_file(stdin);
+  // scanner cita priamo stdin, tokeny drzi parser v pamati
+  set_source_file(stdin);
 
-    // Inicializacia tabulky symbolov
-    Symtable st;
-    symtable_init(&st);
+  // Inicializacia tabulky symbolov
+  Symtable st;
+  symtable_init(&st);
 
-    // Pridanie vstavanych funkcii
-    symtable_add_builtins(&st);
+  // Pridanie vstavanych funkcii
+  symtable_add_builtins(&st);
 
-    // prvy priechod - nacitanie tokenov a zber hlaviciek funkcii
-    int result = parse_headers(&st);
+  // prvy priechod - nacitanie tokenov a zber hlaviciek funkcii
+  int result = parse_headers(&st);
 
-    if(result == ERROR_OK) {
-        // druhy priechod - plna analyza tela funkcii nad polom tokenov
-        result = parse_program(&st);
-    }
+  if (result == ERROR_OK) {
+    // druhy priechod - plna analyza tela funkcii nad polom tokenov
+    result = parse_program(&st);
+  }
 
-    // Uvolnenie zdrojov
-    parser_free();
-    symtable_free(&st);
+  // Uvolnenie zdrojov
+  parser_free();
+  symtable_free(&st);
 
-    return result;
+  return result;
 }
