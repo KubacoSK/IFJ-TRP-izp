@@ -6,6 +6,7 @@
  */
 
 #include "parser.h"
+#include "codegen.h"
 #include "error.h"
 #include "scanner.h"
 #include "symtable.h"
@@ -329,11 +330,19 @@ static int analyze_function(int idx) {
   current_func = idx;
   funcs[idx].state = FUNC_IN_PROGRESS;
 
+  // AI (Claude Code, Claude Opus 5.5)
+  // Prompt: "Krok 1 z Generator postup.md: napojenie generatora na parser,
+  // kazda funkcia ma vlastne buffre, navrat po analyze na poziadanie."
+  gen_function_begin(idx, funcs[idx].sym->name, funcs[idx].is_main);
+
   int res = parse_function(funcs[idx].is_main);
-  if (res == SCANNER_TOKEN_OK)
+  if (res == SCANNER_TOKEN_OK) {
     funcs[idx].state = FUNC_DONE;
+    gen_function_end();
+  }
 
   current_func = prev;
+  gen_select(prev); // pokracovanie volajucej funkcie
   return res;
 }
 

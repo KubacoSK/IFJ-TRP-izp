@@ -5,6 +5,7 @@
  * @brief Vstupny bod prekladaca IFJ26.
  */
 
+#include "codegen.h"
 #include "error.h"
 #include "parser.h"
 #include "scanner.h"
@@ -31,7 +32,15 @@ int main(void) {
     result = parse_program(&st);
   }
 
+  // AI (Claude Code, Claude Opus 5.5)
+  // Prompt: "Krok 1 z Generator postup.md: vypis kodu az na konci, pri chybe
+  // na stdout nic."
+  if (result == ERROR_OK) {
+    result = gen_write(stdout);
+  }
+
   // Uvolnenie zdrojov
+  gen_free();
   parser_free();
   symtable_free(&st);
 

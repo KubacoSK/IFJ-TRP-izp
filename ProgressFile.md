@@ -137,6 +137,12 @@ Posledná aktualizácia: 14. 11. 2026
   v přednáškách“ a autor zadania na democviku varoval pred Shunting Yard.
   Ak treba zmeniť: tabuľka ostane, pribudne riadok/stĺpec `i` a slučka sa
   prepíše na jeden zásobník (formalizmy navrhnúť ručne, nie cez AI).
+  Fórum („FUNEXP – Kombinácia LL a precedenčnej analýzy“, 13. 11.): iný tím
+  spracúva volania funkcií mimo tabuľky a výsledok berie ako jeden `i`;
+  Ondryáš: „pokud vám to funguje správně, není problém“, treba mať dobrú
+  odpoveď na „Proč zrovna takhle?“. Riziko je tým menšie (náš `parse_term`
+  funguje podobne), ale otázka dvoch zásobníkov bez značiek `<` tam nezaznela
+  → stále sa krátko opýtať cvičiaceho a pripraviť zdôvodnenie na obhajobu.
 - [x] Unárne `+`/`-` vrátane `-( ... )`.
 - [x] Vnorené zátvorky vo výrazoch (`((x))`, `1 + (2 * (3))`); prázdne `()`
   sa rozpozná podľa `expect_opd`.
@@ -190,7 +196,12 @@ Posledná aktualizácia: 14. 11. 2026
   `return` / bez typu a všetky vetvy `Unit`), rekurzívne pre vnorený `if`.
 - [x] `@main` bez typu musí mať výsledok tela `Unit`.
 - [ ] Porovnanie `==` / `!=` dvoch hodnôt `Unit` vracia 6, špecifikácia
-  povoľuje porovnanie hodnôt rovnakého typu.
+  povoľuje porovnanie hodnôt rovnakého typu. Fórum („Unit ve formě ()“):
+  `()` je literál typu `Unit` ako celočíselné literály, smie byť všade, kde sa
+  čaká term alebo výraz – `() == ()` by teda malo prejsť.
+- [x] Literál `()` podľa fóra overený 14. 11.: `(((())))`, `print(())`,
+  `f(())`, `return ()`, `val a: Unit = ()` prechádzajú, `() + 42` vracia 6.
+  Biele znaky medzi `(` a `)` sa testovať nebudú.
 - [ ] Overiť na fóre: chyba 6 vs. 10 pre nepovolený `return` (samostatný
   `return` mimo `Unit`, `return` vo funkcii bez typu).
 - [ ] Overiť na fóre: zreťazenie relačných operátorov (`1 < 2 < 3`) teraz
