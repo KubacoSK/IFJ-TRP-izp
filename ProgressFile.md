@@ -1,6 +1,6 @@
 # Progress projektu IFJ a IAL (variant TRP-izp)
 
-Posledná aktualizácia: 13. 11. 2026
+Posledná aktualizácia: 14. 11. 2026
 
 ## Legenda
 
@@ -17,9 +17,8 @@ Posledná aktualizácia: 13. 11. 2026
 - Unit testy prechádzajú: scanner 56/56, hash tabuľka 26/26, tabuľka
   symbolov 19/19 (`make test`).
 - Parser je dvojpriechodový: 1. priechod zbiera hlavičky funkcií, 2. priechod
-  analyzuje telá. Na vetve `SematickaAnalyza-parser` bolo opravených 9 z 10
-  nálezov z `REVIEW_FINDINGS.md` (finding 4 zatiaľ odložený). Vetva je
-  zlúčená do `main` (PR #3).
+  analyzuje telá. Všetkých 10 nálezov z `REVIEW_FINDINGS.md` je opravených
+  (finding 4 v commite `d03b5ee`), vetva je zlúčená do `main` (PR #3).
 - Formátovanie: v `main` je `.clang-format` s čistým štýlom LLVM. Všetky
   zdrojové súbory sú preformátované a zmeny sú zlúčené do `main`; build bez
   warningov a unit testy prechádzajú rovnako ako predtým.
@@ -29,6 +28,10 @@ Posledná aktualizácia: 13. 11. 2026
   neobsahuje generátor).
 - **Pokusné odovzdanie je 19. 11. 2026** – bez generátora kódu prejdú iba
   testy chybových návratových kódov.
+- Projekt bol porovnaný s demo cvičeniami (časť 1 a 2), slidmi prednášok a
+  špecifikáciou; podrobnosti sú v `Democvika feedback.md`. Najväčšie riziko je
+  precedenčná analýza (časť 4), generátor má pred písaním niekoľko
+  rozhodnutí (časť 6).
 
 ## 1. Príprava a architektúra
 
@@ -37,10 +40,14 @@ Posledná aktualizácia: 13. 11. 2026
 - [x] Vytvorenie základného `Makefile` s cieľmi `all`, `ifj26`, `test`,
   `test_scanner`, `test_ht`, `test_symtable` a `clean`.
 - [x] Doplniť samostatné ciele `check` alebo `build-check`.
-- [~] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory (zadanie 2.5
-  to vyžaduje povinne): `.clang-format` (LLVM bez úprav) je v `main`, kód je
-  preformátovaný na vetve `formatovanie-llvm`, treba ju zlúčiť. Odvtedy musí
-  každý formátovať pred commitom (VS Code: Shift+Alt+F alebo Format On Save).
+- [x] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory (zadanie 2.5
+  to vyžaduje povinne): `.clang-format` (LLVM bez úprav), kód je preformátovaný
+  a zlúčený do `main` (PR #4). Odvtedy musí každý formátovať pred commitom
+  (VS Code: Shift+Alt+F alebo Format On Save).
+- [x] Architektúra bez AST: parser riadi preklad a generátor bude vypisovať kód
+  priamo pri rozpoznaní konštrukcie. Zodpovedá prístupu 3 z prednášky 9
+  („Direct Generation of 3AC“). Na obhajobu pripraviť zdôvodnenie (bez AST,
+  dva priechody); demo cvičenie odporúča skôr AST, ale priamy prístup je povolený.
 - [x] Navrhnutie základných dátových štruktúr tokenov v `scanner.h`.
 - [x] Navrhnutie dátových štruktúr hash tabuľky a tabuľky symbolov.
 - [~] Základná modulárna architektúra existuje, treba ju ešte prepojiť s
@@ -52,7 +59,8 @@ Posledná aktualizácia: 13. 11. 2026
   `parse_params` uvoľňuje pri chybe; pri chybe sa ešte neuvoľní `current_tok`
   a symbolová tabuľka v niektorých vetvách.
 - [ ] Hlavičky zdrojových súborov neobsahujú mená a loginy autorov
-  (zadanie 2.5 to vyžaduje).
+  (zadanie 2.5 to vyžaduje). Demo cvičenie: hlavička s autorom a popisom má
+  byť v každom súbore a všade rovnaká.
 
 ## 2. Hash tabuľka a tabuľka symbolov (IAL)
 
@@ -119,6 +127,16 @@ Posledná aktualizácia: 13. 11. 2026
 - [x] Stredník ako oddeľovač príkazov na jednom logickom riadku.
 - [x] `if ... then ... else` (else povinné), `while ... do`, `return [výraz]`.
 - [x] Precedenčná analýza výrazov s `+ - * /`, relačnými operátormi a zátvorkami.
+- [x] Precedenčná tabuľka navrhnutá ručne podľa prednášky 8 (priorita,
+  asociativita, zátvorky, `$`); hodnoty sú správne.
+- [ ] **RIZIKO – overiť u cvičiaceho / na fóre:** slučka `parse_expression_inner`
+  sa líši od algoritmu z prednášky 8. Slidy: jeden zásobník s terminálmi, `E` a
+  značkami `<`, identifikátor `i` v tabuľke, redukcia hľadá pravidlo `A → y`.
+  Kód: dva zásobníky (operátory a typy), bez `<`, bez `i` v tabuľke, redukcia
+  vyberie operátor a dva operandy. Zadanie žiada analýzu „odpovídající výkladu
+  v přednáškách“ a autor zadania na democviku varoval pred Shunting Yard.
+  Ak treba zmeniť: tabuľka ostane, pribudne riadok/stĺpec `i` a slučka sa
+  prepíše na jeden zásobník (formalizmy navrhnúť ručne, nie cez AI).
 - [x] Unárne `+`/`-` vrátane `-( ... )`.
 - [x] Vnorené zátvorky vo výrazoch (`((x))`, `1 + (2 * (3))`); prázdne `()`
   sa rozpozná podľa `expect_opd`.
@@ -135,7 +153,9 @@ Posledná aktualizácia: 13. 11. 2026
   neprijímať ako identifikátor, netestuje sa). `val a: Boolean` dnes vráti 3.
 - [~] Volanie funkcie vo výraze (`1 + f(x)`) a výraz/volanie v argumentoch sú
   prijímané – v základnom zadaní je to chyba, platné iba s rozšírením FUNEXP.
-  Treba rozhodnúť, či FUNEXP implementujeme.
+  Demo cvičenie FUNEXP silno odporúča (hlavne úpravy precedenčnej analýzy,
+  zároveň rieši nejednoznačnosť priradenia), polovicu už máme → dokončiť
+  a zapísať do `rozsireni`.
 - [ ] Navrhnúť a zdokumentovať kompletnú LL gramatiku a LL tabuľku.
 - [~] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi
   (existujú lokálne, treba ich pridať do `tests/` a skriptu).
@@ -185,6 +205,26 @@ Posledná aktualizácia: 13. 11. 2026
 
 ## 6. Generovanie cieľového kódu IFJcode26 (Jakub)
 
+Rozhodnutia pred písaním (demo cvičenie 2, overené v špecifikácii):
+
+- [ ] Rozsahy platnosti: jeden lokálny rámec na funkciu, premenné premenovať
+  podľa rozsahu (`x$1`, `x$2`). Číslo rozsahu musí byť jedinečné z počítadla,
+  nie hĺbka zanorenia → doplniť ID do `Scope` v `symtable.h`.
+- [ ] Všetky `DEFVAR` presunúť na začiatok funkcie (`DEFVAR` v cykle = chyba 52
+  pri druhom prechode) → dva buffery na funkciu: `DEFVAR`-y a telo.
+- [ ] Výstup bufferovať po funkciách a vypísať až na konci bez chyby (telo sa
+  môže generovať prerušovane pri analýze na požiadanie).
+- [ ] Volacia konvencia: argumenty aj návratová hodnota na dátovom zásobníku
+  (odporúčané, hlavne s FUNEXP). Nevracať hodnotu v `TF` – `POPFRAME` ju prepíše.
+- [ ] Výrazy zásobníkovými inštrukciami (`PUSHS`, `ADDS`, …) pri redukcii
+  v precedenčnej analýze; pozor na `Int → Double` pri ľavom operande.
+- [ ] Jedinečné návestia z počítadla (napr. `fun$while$3$end`).
+- [ ] `Unit` ako `nil@nil`, ale `print(())` musí vypísať `()` (nie `nil`).
+- [ ] `Double` literály cez `printf("%a")`; `print` = `WRITE` (`%a`),
+  `toStr` pre `Double` = `FLOAT2STR` (`%.2f`).
+
+Implementácia:
+
 - [ ] Navrhnúť rozhranie a dátové štruktúry generátora.
 - [ ] Implementovať výpis hlavičky a základných inštrukcií IFJcode26.
 - [ ] Implementovať tvorbu a rušenie rámcov.
@@ -219,6 +259,12 @@ Posledná aktualizácia: 13. 11. 2026
 ## 8. Dokumentácia a odovzdanie
 
 - [~] Zdrojové súbory obsahujú základné komentáre k verejným rozhraniam.
+  Demo cvičenie: dokumentácia funkcií má byť v `.h` (ideálne Doxygen),
+  vo vnútri funkcií stručné komentáre – prejsť všetky `.h`.
+- [ ] Pripraviť odpovede na obhajobu: prečo bez AST, prečo dva priechody,
+  prečo scanner s vnorenými komentármi nie je čistý konečný automat, prečo
+  scanner nepracuje s tabuľkou symbolov (prednáška 5 to pripúšťa), parametre
+  hash tabuľky (djb2, 2039 slotov, lineárny krok), tvar precedenčnej analýzy.
 - [ ] Priebežne zapisovať použitie AI podľa požiadaviek predmetu.
 - [ ] Vytvoriť súbor `rozdeleni` (LF konce riadkov, súčet 100 %).
 - [ ] Vytvoriť súbor `rozsireni` (identifikátory rozšírení, LF konce riadkov).
@@ -243,8 +289,50 @@ Posledná aktualizácia: 13. 11. 2026
 2. ~~Opraviť chyby precedenčnej analýzy.~~ Hotové.
 3. ~~Výsledok bloku, pravidlá návratovej hodnoty (O11), analýza na požiadanie
    a graf volaní (O12, finding 4).~~ Hotové.
-4. Navrhnúť a implementovať generátor IFJcode26 – bez neho nepôjdu validné testy.
-5. Pridať end-to-end testy a skript do `tests/`.
-6. Zlúčiť vetvu `formatovanie-llvm` (`clang-format`), spustiť build a testy na
-   Merlin, doplniť hlavičky súborov.
-7. Dokončiť dokumentáciu, `rozdeleni`, `rozsireni`, `is_it_ok.sh` a archív.
+4. ~~Zlúčiť vetvu `formatovanie-llvm` (`clang-format`).~~ Hotové (PR #4).
+5. **Overiť precedenčnú analýzu u cvičiaceho / na fóre** (časť 4); ak treba,
+   prepísať slučku na algoritmus z prednášky 8 skôr, než sa na ňu napojí generátor.
+6. Rozhodnúť návrh generátora (časť 6): rozsahy s jedinečným ID, `DEFVAR`
+   na začiatok funkcie, buffery po funkciách, volacia konvencia cez zásobník.
+7. Implementovať generátor IFJcode26 – bez neho nepôjdu validné testy
+   (do pokusného odovzdania 19. 11. aspoň `print`, výrazy, premenné, `if`, `while`).
+8. Dokončiť FUNEXP a zapísať ho do `rozsireni`.
+9. Pridať end-to-end testy a skript do `tests/`.
+10. Spustiť build a testy na Merlin, doplniť hlavičky súborov a dokumentáciu
+    funkcií v `.h`.
+11. Dokončiť dokumentáciu, `rozdeleni`, `rozsireni`, `is_it_ok.sh` a archív;
+    pripraviť odpovede na obhajobu (časť 8).
+
+## Zoznam úloh
+
+Všetky otvorené úlohy na jednom mieste (podrobnosti v príslušnej časti).
+
+**Pred pokusným odovzdaním (19. 11. 2026):**
+
+- [ ] Overiť precedenčnú analýzu u cvičiaceho / na fóre (časť 4).
+- [ ] Rozhodnúť návrh generátora: rozsahy, `DEFVAR`, buffery, volacia konvencia (časť 6).
+- [ ] Doplniť jedinečné ID rozsahu do `Scope` (časť 6).
+- [ ] Implementovať základ generátora: hlavička, `print`, výrazy, premenné,
+  `if`, `while`, volania funkcií (časť 6).
+- [ ] Otestovať výstup cez interpret `ic26int`, kód iba na `stdout` (časť 6).
+- [ ] Hlavičky zdrojových súborov s autormi a popisom (časť 1).
+- [ ] Vytvoriť `rozdeleni` a `rozsireni` (časť 8).
+
+**Do finálneho odovzdania (27. 11. 2026):**
+
+- [ ] Dokončiť generátor vrátane vstavaných funkcií a chyby 40 pri `subStr` (časť 6).
+- [ ] Dokončiť FUNEXP (časť 4).
+- [ ] Rozhodnúť kľúčové slová `Boolean`, `case`, `for`, … v scanneri (časť 4).
+- [ ] Opraviť porovnanie `Unit == Unit` a poradie chýb medzi priechodmi (časť 5).
+- [ ] Overiť na fóre: chyba 6 vs. 10 pri `return`, `1 < 2 < 3`, `val x`
+  s parametrom `x` (časť 5).
+- [ ] Uvoľnenie pamäte pri chybe (`current_tok`, symbolová tabuľka) (časť 1).
+- [ ] End-to-end testy a skript v `tests/`, chybové vstupy z lokálnej sady (časť 7).
+- [ ] Testy hraničných prípadov scanneru a tabuliek (časti 2, 3).
+- [ ] Build a testy na serveri Merlin (časť 7).
+- [ ] Drobné výnimky v pomenovaní (časť 7).
+- [ ] Dokumentácia funkcií v `.h` (časť 8).
+- [ ] LL gramatika a LL tabuľka, stavový diagram scanneru (časti 3, 4).
+- [ ] `dokumentace.pdf`, `README.md`, záznam použitia AI (časť 8).
+- [ ] Odpovede na obhajobu (časť 8).
+- [ ] `is_it_ok.sh` a kontrola archívu (časť 8).
