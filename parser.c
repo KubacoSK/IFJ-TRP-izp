@@ -236,7 +236,6 @@ static int parse_id_statement(StmtResult *out);
 static int parse_if(StmtResult *out);
 static int parse_while(void);
 static int parse_return(void);
-static int parse_term(DataType *out_type);
 static int parse_expression(DataType *out_type);
 
 // stav analyzy tela funkcie
@@ -421,178 +420,6 @@ static int check_recursion(void) {
   return res;
 }
 
-// vyraz v zatvorke
-static int parse_paren_expr(DataType *out_type) {
-  int res = next_token(); // (
-  if (res != SCANNER_TOKEN_OK)
-    return res;
-
-  // prazdne ()
-  if (check(TOKEN_TYPE_RIGHT_PAREN)) {
-    *out_type = TYPE_UNIT;
-    return next_token();
-  }
-
-  res = parse_expression(out_type);
-  if (res != SCANNER_TOKEN_OK)
-    return res;
-  return expect(TOKEN_TYPE_RIGHT_PAREN);
-}
-
-// Spracovanie jednoducheho vyrazu (literal, premenna alebo volanie funkcie)
-static int parse_term(DataType *out_type) {
-
-  // Unarne operatory (+, -)
-  if (check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
-    int res = next_token();
-    if (res != SCANNER_TOKEN_OK)
-      return res;
-    // -(...) cely vyraz
-    if (check(TOKEN_TYPE_LEFT_PAREN))
-      res = parse_paren_expr(out_type);
-    else
-      res = parse_term(out_type); // rekurzivne precitanie operandu
-    if (res != SCANNER_TOKEN_OK)
-      return res;
-
-    // unarne operatory su povolene len pre cisla
-    if (*out_type != TYPE_INT && *out_type != TYPE_DOUBLE) {
-      return ERROR_SEM_TYPE;
-    }
-    return SCANNER_TOKEN_OK;
-  }
-
-  // Literaly
-  if (check(TOKEN_TYPE_INT_NUMBER)) {
-    *out_type = TYPE_INT;
-    return next_token();
-  }
-  if (check(TOKEN_TYPE_DOUBLE_NUMBER)) {
-    *out_type = TYPE_DOUBLE;
-    return next_token();
-  }
-  if (check(TOKEN_TYPE_STRING)) {
-    *out_type = TYPE_STRING;
-    return next_token();
-  }
-  // prazdne zatvorky pre Unit ()
-  if (check(TOKEN_TYPE_LEFT_PAREN)) {
-    int res = next_token(); // (
-    if (res != SCANNER_TOKEN_OK)
-      return res;
-
-    if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
-      return ERROR_SYNTAX;
-    }
-    *out_type = TYPE_UNIT;
-    return next_token(); // )
-  }
-
-  // Identifikator (premmena alebo funkcia)
-  if (check(TOKEN_TYPE_IDENTIFIER)) {
-    char *id_name = str_dup(current_tok.attribute.string);
-    int res = next_token();
-    if (res != SCANNER_TOKEN_OK) {
-      free(id_name);
-      return res;
-    }
-
-    // volanie funkcie?
-    if (check(TOKEN_TYPE_LEFT_PAREN)) {
-      Symbol *func = symtable_find_func(symtab, id_name);
-      if (!func) {
-        free(id_name);
-        return ERROR_SEM_UNDEF; // Chyba 3
-      }
-
-      // typ volanej funkcie
-      res = use_function(func);
-      if (res != SCANNER_TOKEN_OK) {
-        free(id_name);
-        return res;
-      }
-
-      res = next_token(); // (
-      if (res != SCANNER_TOKEN_OK) {
-        free(id_name);
-        return res;
-      }
-
-      // pocitadlo precitanych argumentov
-      size_t arg_index_count = 0;
-
-      // docasne preskocenie argumentov (potom treba pridat ich kontrolu)
-      if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
-        while (1) {
-          DataType arg_type;
-          res = parse_term(&arg_type); // nacitanie argumentu
-          if (res != SCANNER_TOKEN_OK) {
-            free(id_name);
-            return res;
-          }
-
-          // kontrola ci neposielame prilis vela argumentov nez funkcia ocakava
-          if (arg_index_count >= func->data.func.param_count) {
-            free(id_name);
-            return ERROR_SEM_PARAM; // Chyba 5
-          }
-
-          // kontrola typu argumentu
-          DataType expected_type = func->data.func.params[arg_index_count].type;
-          if (expected_type != arg_type && expected_type != TYPE_ANY) {
-            // povolime konverziu Int -> Double
-            if (!(expected_type == TYPE_DOUBLE && arg_type == TYPE_INT)) {
-              free(id_name);
-              return ERROR_SEM_PARAM; // Chyba 5
-            }
-          }
-
-          arg_index_count++; // posunieme sa na dalsi parameter
-
-          if (check(TOKEN_TYPE_COMMA)) {
-            res = next_token();
-            if (res != SCANNER_TOKEN_OK) {
-              free(id_name);
-              return res;
-            }
-            // koncova ciarka len pred novym riadkom
-            if (check(TOKEN_TYPE_RIGHT_PAREN) &&
-                current_tok.had_preceding_newline)
-              break;
-            continue;
-          }
-          break;
-        }
-      }
-
-      // kontrola, ci vsetky argumenty boli poslane
-      if (arg_index_count < func->data.func.param_count) {
-        free(id_name);
-        return ERROR_SEM_PARAM; // Chyba 5
-      }
-
-      res = expect(TOKEN_TYPE_RIGHT_PAREN);
-      *out_type = func->data.func.return_type;
-      free(id_name);
-      return res;
-    }
-
-    // premenna?
-    else {
-      Symbol *var = symtable_find_var(symtab, id_name);
-      if (!var) {
-        free(id_name);
-        return ERROR_SEM_UNDEF; // Chyba 3
-      }
-      *out_type = var->data.var.type;
-      free(id_name);
-      return SCANNER_TOKEN_OK;
-    }
-  }
-
-  return ERROR_SYNTAX;
-}
-
 // pomocna funkcia na spracovanie redukcie (sematika)
 static int reduce_operation(TokenType op, DataType left, DataType right,
                             DataType *result) {
@@ -763,6 +590,68 @@ static PrecSymbol token_to_prec(const ExprStack *s, int open_parens) {
   }
 }
 
+// Volanie funkcie id(arg, ...), id je aktualny token
+static int parse_call(DataType *out_type) {
+  Symbol *func = symtable_find_func(symtab, current_tok.attribute.string);
+  if (!func)
+    return ERROR_SEM_UNDEF;
+
+  // typ volanej funkcie
+  int res = use_function(func);
+  if (res != SCANNER_TOKEN_OK)
+    return res;
+
+  res = next_token();
+  if (res != SCANNER_TOKEN_OK)
+    return res;
+  res = next_token();
+  if (res != SCANNER_TOKEN_OK)
+    return res;
+
+  size_t arg_count = 0;
+  if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
+    while (1) {
+      // argument skonci na ',' alebo na neparovej ')'
+      DataType arg_type;
+      res = parse_expression(&arg_type);
+      if (res != SCANNER_TOKEN_OK)
+        return res;
+
+      // bool sa neda predat
+      if (arg_type == TYPE_BOOL)
+        return ERROR_SEM_TYPE; 
+
+      // prilis vela argumentov
+      if (arg_count >= func->data.func.param_count)
+        return ERROR_SEM_PARAM; 
+
+      // typ argumentu, povolena konverzia Int -> Double
+      DataType expected = func->data.func.params[arg_count].type;
+      if (expected != TYPE_ANY && !is_compatible(expected, arg_type))
+        return ERROR_SEM_PARAM; 
+
+      arg_count++;
+
+      if (check(TOKEN_TYPE_COMMA)) {
+        res = next_token();
+        if (res != SCANNER_TOKEN_OK)
+          return res;
+        if (check(TOKEN_TYPE_RIGHT_PAREN) && current_tok.had_preceding_newline)
+          break;
+        continue;
+      }
+      break;
+    }
+  }
+
+  // malo argumentov
+  if (arg_count < func->data.func.param_count)
+    return ERROR_SEM_PARAM; 
+
+  *out_type = func->data.func.return_type;
+  return expect(TOKEN_TYPE_RIGHT_PAREN);
+}
+
 // presun terminalu i na zasobnik
 static int shift_operand(ExprItem *item) {
   item->tok_index = pos;
@@ -770,7 +659,7 @@ static int shift_operand(ExprItem *item) {
                  tokens[pos + 1].type == TOKEN_TYPE_LEFT_PAREN;
   if (is_call) {
     item->typed = true;
-    return parse_term(&item->type);
+    return parse_call(&item->type);
   }
   return next_token();
 }
@@ -1035,8 +924,8 @@ static int parse_id_statement(StmtResult *out) {
   // lookahead, za id je vzdy aspon EOF alebo zarazka
   TokenType next_type = tokens[pos + 1].type;
 
-  // samotny vyraz
-  if (next_type != TOKEN_TYPE_ASSIGN && next_type != TOKEN_TYPE_LEFT_PAREN) {
+  // samotny vyraz alebo volanie funkcie ako prikaz
+  if (next_type != TOKEN_TYPE_ASSIGN) {
     return parse_expr_statement(out);
   }
 
@@ -1092,87 +981,6 @@ static int parse_id_statement(StmtResult *out) {
     }
 
     set_result(out, TYPE_UNIT); // priradenie = Unit
-    free(id_name);
-    return expect_stmt_end();
-  }
-
-  // Samostatne volanie funkcie ako prikaz: foo(arg1, arg2) EOL
-  if (check(TOKEN_TYPE_LEFT_PAREN)) {
-    // overenie ci funkcia existuje
-    Symbol *func = symtable_find_func(symtab, id_name);
-    if (!func) {
-      free(id_name);
-      return ERROR_SEM_UNDEF; // Chyba 3
-    }
-
-    // typ volanej funkcie
-    res = use_function(func);
-    if (res != SCANNER_TOKEN_OK) {
-      free(id_name);
-      return res;
-    }
-
-    res = next_token();
-    if (res != SCANNER_TOKEN_OK) {
-      free(id_name);
-      return res;
-    }
-
-    size_t arg_index_count = 0; // pocitadlo argumentov
-
-    if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
-      while (1) {
-        DataType arg_type;
-        res = parse_term(&arg_type);
-        if (res != SCANNER_TOKEN_OK) {
-          free(id_name);
-          return res;
-        }
-
-        // kontrola poctu a typu argumentov
-        if (arg_index_count >= func->data.func.param_count) {
-          free(id_name);
-          return ERROR_SEM_PARAM;
-        }
-
-        DataType expected_type = func->data.func.params[arg_index_count].type;
-        if (expected_type != arg_type && expected_type != TYPE_ANY) {
-          if (!(expected_type == TYPE_DOUBLE && arg_type == TYPE_INT)) {
-            free(id_name);
-            return ERROR_SEM_PARAM;
-          }
-        }
-        arg_index_count++;
-
-        if (check(TOKEN_TYPE_COMMA)) {
-          res = next_token();
-          if (res != SCANNER_TOKEN_OK) {
-            free(id_name);
-            return res;
-          }
-          // koncova ciarka len pred novym riadkom
-          if (check(TOKEN_TYPE_RIGHT_PAREN) &&
-              current_tok.had_preceding_newline)
-            break;
-          continue;
-        }
-        break;
-      }
-    }
-
-    // kontrola, ci vsetky argumenty boli poslane
-    if (arg_index_count < func->data.func.param_count) {
-      free(id_name);
-      return ERROR_SEM_PARAM;
-    }
-
-    res = expect(TOKEN_TYPE_RIGHT_PAREN);
-    if (res != SCANNER_TOKEN_OK) {
-      free(id_name);
-      return res;
-    }
-
-    set_result(out, func->data.func.return_type); // vysledok volania
     free(id_name);
     return expect_stmt_end();
   }
