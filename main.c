@@ -31,10 +31,7 @@ int main(void) {
     // druhy priechod - plna analyza tela funkcii nad polom tokenov
     result = parse_program(&st);
   }
-
-  // AI (Claude Code, Claude Opus 5.5)
-  // Prompt: "Krok 1 z Generator postup.md: vypis kodu az na konci, pri chybe
-  // na stdout nic."
+  
   if (result == ERROR_OK) {
     result = gen_write(stdout);
   }

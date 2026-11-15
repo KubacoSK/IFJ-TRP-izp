@@ -127,19 +127,73 @@ void gen_emit(const char *fmt, ...) {
   va_end(args);
 }
 
+void gen_push_int(int64_t value) {
+  gen_emit("PUSHS int@%lld", (long long)value);
+}
+
+void gen_push_double(double value) { gen_emit("PUSHS float@%a", value); }
+
+void gen_push_string(const char *value) {
+  if (current < 0)
+    return;
+
+  // najhorsi pripad: kazdy znak ako \xyz (4 znaky)
+  size_t len = strlen(value);
+  char *esc = malloc(len * 4 + 1);
+  if (!esc) {
+    gen_error = true;
+    return;
+  }
+
+  size_t j = 0;
+  for (size_t i = 0; i < len; i++) {
+    unsigned char c = (unsigned char)value[i];
+    // escape: biele a riadiace znaky, '#', '\', DEL a ne-ASCII bajty
+    if (c <= 32 || c == '#' || c == '\\' || c >= 127) {
+      j += (size_t)sprintf(esc + j, "\\%03u", (unsigned)c);
+    } else {
+      esc[j++] = (char)c;
+    }
+  }
+  esc[j] = '\0';
+
+  gen_emit("PUSHS string@%s", esc);
+  free(esc);
+}
+
+void gen_push_unit(void) { gen_emit("PUSHS nil@nil"); }
+
+// print(x): hodnota je na zasobniku, vysledok je Unit
+static void gen_print(DataType arg_type) {
+  gen_emit("POPS LF@%%t1");
+  if (arg_type == TYPE_UNIT) {
+    // nil by sa vypisal ako "nil", Unit sa vypisuje ako ()
+    gen_emit("WRITE string@()");
+  } else {
+    gen_emit("WRITE LF@%%t1");
+  }
+  gen_push_unit();
+}
+
+void gen_builtin_call(const char *name, const DataType *arg_types,
+                      size_t arg_count) {
+  if (strcmp(name, "print") == 0 && arg_count == 1) {
+    gen_print(arg_types[0]);
+  }
+  // ostatne vstavane funkcie doplni krok 6
+}
+
 int gen_write(FILE *out) {
   if (gen_error || main_idx < 0)
     return ERROR_INTERNAL;
 
-  // hlavicka a vstupny bod (R12): vysledok @main (Unit) sa zahodi
+  // hlavicka a vstupny bod: vysledok @main (Unit) zmaze CLEARS
   fprintf(out, ".IFJcode26\n");
-  fprintf(out, "DEFVAR GF@%%t1\n");
-  fprintf(out, "DEFVAR GF@%%t2\n");
   fprintf(out, "CALL $f$%s\n", funcs[main_idx].name);
-  fprintf(out, "POPS GF@%%t1\n");
+  fprintf(out, "CLEARS\n");
   fprintf(out, "EXIT int@0\n");
 
-  // funkcie: prolog, defs, telo (epilog je na konci tela)
+  // funkcie: prolog, pomocne premenne, defs, telo (epilog je na konci tela)
   for (size_t i = 0; i < func_cap; i++) {
     FuncCode *f = &funcs[i];
     if (!f->name)
@@ -147,6 +201,8 @@ int gen_write(FILE *out) {
     fprintf(out, "\nLABEL $f$%s\n", f->name);
     fprintf(out, "CREATEFRAME\n");
     fprintf(out, "PUSHFRAME\n");
+    fprintf(out, "DEFVAR LF@%%t1\n");
+    fprintf(out, "DEFVAR LF@%%t2\n");
     if (f->defs.data)
       fputs(f->defs.data, out);
     if (f->body.data)
