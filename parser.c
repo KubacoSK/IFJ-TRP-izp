@@ -459,6 +459,13 @@ static int reduce_operation(TokenType op, DataType left, DataType right,
     bool left_num = (left == TYPE_INT || left == TYPE_DOUBLE);
     bool right_num = (right == TYPE_INT || right == TYPE_DOUBLE);
 
+    // == a != porovnaju aj dve hodnoty Unit
+    if ((op == TOKEN_TYPE_EQ || op == TOKEN_TYPE_NEQ) && left == TYPE_UNIT &&
+        right == TYPE_UNIT) {
+      *result = TYPE_BOOL;
+      return SCANNER_TOKEN_OK;
+    }
+
     // porovnat mozeme cisla alebo 2 stringy
     if ((left_num && right_num) ||
         (left == TYPE_STRING && right == TYPE_STRING)) {
