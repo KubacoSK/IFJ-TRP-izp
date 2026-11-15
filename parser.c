@@ -735,9 +735,9 @@ static PrecSymbol token_to_prec(const ExprStack *s, int open_parens) {
   case TOKEN_TYPE_IDENTIFIER:
     return PREC_I;
   case TOKEN_TYPE_PLUS:
-    return has_operand(s) ? PREC_PLUS : PREC_I;
+    return has_operand(s) ? PREC_PLUS : PREC_UNARY;
   case TOKEN_TYPE_MINUS:
-    return has_operand(s) ? PREC_MINUS : PREC_I;
+    return has_operand(s) ? PREC_MINUS : PREC_UNARY;
   case TOKEN_TYPE_MUL:
     return PREC_MUL;
   case TOKEN_TYPE_DIV:
@@ -768,7 +768,7 @@ static int shift_operand(ExprItem *item) {
   item->tok_index = pos;
   bool is_call = check(TOKEN_TYPE_IDENTIFIER) &&
                  tokens[pos + 1].type == TOKEN_TYPE_LEFT_PAREN;
-  if (is_call || check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
+  if (is_call) {
     item->typed = true;
     return parse_term(&item->type);
   }
@@ -820,7 +820,14 @@ static int reduce_rule(ExprStack *s) {
   if (len == 1 && is_term(&y[0], PREC_I)) {
     res = reduce_operand(&y[0], &result.type);
 
-  } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
+  } else if (len == 2 && is_term(&y[0], PREC_UNARY) &&
+             y[1].kind == ITEM_NONTERM) {
+    // E -> u E, iba pre cisla
+    if(y[1].type != TYPE_INT && y[1].type != TYPE_DOUBLE)
+      return ERROR_SEM_TYPE;
+    result.type = y[1].type;
+
+    } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
              is_term(&y[1], PREC_RPAREN)) {
     result.type = TYPE_UNIT;
 
