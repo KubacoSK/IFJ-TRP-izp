@@ -16,60 +16,50 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EXPR_STACK_INIT 16 // zaciatocna velkost zasobnikov vyrazu
+#define EXPR_STACK_INIT 16 // zaciatocna velkost zasobnika vyrazu
 
-// pomocna funkcia na ziskanie indexu pre precedencu tabulku
-// poradie podla hlavicky tabulky: + - * / < <= > >= == != ( ) $
-static int get_op_index(TokenType type) {
-  switch (type) {
-  case TOKEN_TYPE_PLUS:
-    return 0;
-  case TOKEN_TYPE_MINUS:
-    return 1;
-  case TOKEN_TYPE_MUL:
-    return 2;
-  case TOKEN_TYPE_DIV:
-    return 3;
-  case TOKEN_TYPE_LT:
-    return 4;
-  case TOKEN_TYPE_LEQ:
-    return 5;
-  case TOKEN_TYPE_GT:
-    return 6;
-  case TOKEN_TYPE_GEQ:
-    return 7;
-  case TOKEN_TYPE_EQ:
-    return 8;
-  case TOKEN_TYPE_NEQ:
-    return 9;
-  case TOKEN_TYPE_LEFT_PAREN:
-    return 10;
-  case TOKEN_TYPE_RIGHT_PAREN:
-    return 11;
-  case TOKEN_TYPE_EOL:
-    return 12; // EOL je koniec vyrazu ($)
-  default:
-    return -1; // iny token (napr. cislo)
-  }
-}
+// Terminaly precedencnej tabulky (poradie riadkov a stlpcov tabulky)
+typedef enum {
+  PREC_I,      
+  PREC_PLUS,  
+  PREC_MINUS,  
+  PREC_MUL,    
+  PREC_DIV,    
+  PREC_LT,     
+  PREC_LEQ,    
+  PREC_GT,     
+  PREC_GEQ,    
+  PREC_EQ,     
+  PREC_NEQ,    
+  PREC_LPAREN, 
+  PREC_RPAREN, 
+  PREC_UNARY,  
+  PREC_DOLLAR,
+  PREC_COUNT
+} PrecSymbol;
 
 // Precedencna tabulka, E znaci error
-static const char prec_table[13][13] = {
-    // +    -    *    /    <    <=   >    >=   ==   !=   (    )    $
-    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // +
-    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // -
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // *
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // /
-    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // <
-    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // <=
-    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // >
-    {'<', '<', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '>'}, // >=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '>', '>'}, // ==
-    {'<', '<', '<', '<', '<', '<', '<', '<', '>', '>', '<', '>', '>'}, // !=
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', 'E'}, // (
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', '>'}, // )
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', 'E', 'E'}  // $
+// Relacne operatory nie su asociativne
+// clang-format off
+static const char prec_table[PREC_COUNT][PREC_COUNT] = {
+    // i   +    -    *    /    <    <=   >    >=   ==   !=   (    )    u    $
+    {'E', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', '>'}, // i
+    {'<', '>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'}, // +
+    {'<', '>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'}, // -
+    {'<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'}, // *
+    {'<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'}, // /
+    {'<', '<', '<', '<', '<', 'E', 'E', 'E', 'E', 'E', 'E', '<', '>', '<', '>'}, // <
+    {'<', '<', '<', '<', '<', 'E', 'E', 'E', 'E', 'E', 'E', '<', '>', '<', '>'}, // <=
+    {'<', '<', '<', '<', '<', 'E', 'E', 'E', 'E', 'E', 'E', '<', '>', '<', '>'}, // >
+    {'<', '<', '<', '<', '<', 'E', 'E', 'E', 'E', 'E', 'E', '<', '>', '<', '>'}, // >=
+    {'<', '<', '<', '<', '<', 'E', 'E', 'E', 'E', 'E', 'E', '<', '>', '<', '>'}, // ==
+    {'<', '<', '<', '<', '<', 'E', 'E', 'E', 'E', 'E', 'E', '<', '>', '<', '>'}, // !=
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', 'E'}, // (
+    {'E', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', 'E', '>', 'E', '>'}, // )
+    {'<', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'}, // u
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', 'E', '<', 'E'}, // $
 };
+// clang-format on
 
 // pole tokenov, naplni ho prvy priechod
 static Token *tokens = NULL;
@@ -655,192 +645,277 @@ static int reduce_operation(TokenType op, DataType left, DataType right,
   return ERROR_SYNTAX;
 }
 
-// zasobniky vyrazu
+// druh polozky na zasobniku
+typedef enum {
+  ITEM_TERM,    
+  ITEM_NONTERM, 
+  ITEM_HANDLE   
+} ItemKind;
+
+// polozka precedencnej analyzy
 typedef struct {
-  TokenType *ops;
-  DataType *types;
-  int op_top;
-  int type_top;
-  int op_cap;
-  int type_cap;
+  ItemKind kind;
+  PrecSymbol sym;   
+  TokenType op;     
+  DataType type;    
+  size_t tok_index; 
+  bool typed;       
+} ExprItem;
+
+// zasobnik precedencnej analyzy
+typedef struct {
+  ExprItem *items;
+  size_t top; 
+  size_t cap;
 } ExprStack;
 
-// push operator
-static int push_op(ExprStack *s, TokenType op) {
-  if (s->op_top + 1 >= s->op_cap) {
-    int new_cap = s->op_cap * 2;
-    TokenType *tmp = realloc(s->ops, (size_t)new_cap * sizeof(TokenType));
+// vlozi polozku na vrch zasobnika, pri zaplneni ho zvacsi
+static int stack_push(ExprStack *s, ExprItem item) {
+  if (s->top == s->cap) {
+    size_t new_cap = s->cap * 2;
+    ExprItem *tmp = realloc(s->items, new_cap * sizeof(ExprItem));
     if (!tmp)
       return ERROR_INTERNAL;
-    s->ops = tmp;
-    s->op_cap = new_cap;
+    s->items = tmp;
+    s->cap = new_cap;
   }
-  s->ops[++s->op_top] = op;
+  s->items[s->top++] = item;
   return SCANNER_TOKEN_OK;
 }
 
-// push typ
-static int push_type(ExprStack *s, DataType type) {
-  if (s->type_top + 1 >= s->type_cap) {
-    int new_cap = s->type_cap * 2;
-    DataType *tmp = realloc(s->types, (size_t)new_cap * sizeof(DataType));
-    if (!tmp)
-      return ERROR_INTERNAL;
-    s->types = tmp;
-    s->type_cap = new_cap;
+// index najvrchnejsieho terminalu, preskoci E ($ je vzdy na dne)
+static size_t top_terminal(const ExprStack *s) {
+  size_t i = s->top;
+  while (i > 0) {
+    i--;
+    if (s->items[i].kind == ITEM_TERM)
+      return i;
   }
-  s->types[++s->type_top] = type;
+  return 0;
+}
+
+// vlozi znacku < hned nad terminal na indexe term_idx
+static int insert_handle(ExprStack *s, size_t term_idx) {
+  ExprItem handle = {.kind = ITEM_HANDLE};
+  int res = stack_push(s, handle);
+  if (res != SCANNER_TOKEN_OK)
+    return res;
+
+  // posunie polozky nad terminalom o jedno vyssie a na uvolnene miesto da <
+  size_t at = term_idx + 1;
+  memmove(&s->items[at + 1], &s->items[at],
+          (s->top - 1 - at) * sizeof(ExprItem));
+  s->items[at] = handle;
   return SCANNER_TOKEN_OK;
+}
+
+// polozka je terminal sym
+static bool is_term(const ExprItem *it, PrecSymbol sym) {
+  return it->kind == ITEM_TERM && it->sym == sym;
+}
+
+// polozka je binarny operator
+static bool is_binary_op(const ExprItem *it) {
+  return it->kind == ITEM_TERM && it->sym >= PREC_PLUS && it->sym <= PREC_NEQ;
+}
+
+// pred aktualnym tokenom uz stoji hotovy operand
+static bool has_operand(const ExprStack *s) {
+  const ExprItem *t = &s->items[s->top - 1];
+  return t->kind == ITEM_NONTERM || is_term(t, PREC_I) ||
+         is_term(t, PREC_RPAREN);
+}
+
+// prevod aktualneho tokenu na terminal precedencnej tabulky
+static PrecSymbol token_to_prec(const ExprStack *s, int open_parens) {
+  switch (current_tok.type) {
+  case TOKEN_TYPE_INT_NUMBER:
+  case TOKEN_TYPE_DOUBLE_NUMBER:
+  case TOKEN_TYPE_STRING:
+  case TOKEN_TYPE_IDENTIFIER:
+    return PREC_I;
+  case TOKEN_TYPE_PLUS:
+    return has_operand(s) ? PREC_PLUS : PREC_I;
+  case TOKEN_TYPE_MINUS:
+    return has_operand(s) ? PREC_MINUS : PREC_I;
+  case TOKEN_TYPE_MUL:
+    return PREC_MUL;
+  case TOKEN_TYPE_DIV:
+    return PREC_DIV;
+  case TOKEN_TYPE_LT:
+    return PREC_LT;
+  case TOKEN_TYPE_LEQ:
+    return PREC_LEQ;
+  case TOKEN_TYPE_GT:
+    return PREC_GT;
+  case TOKEN_TYPE_GEQ:
+    return PREC_GEQ;
+  case TOKEN_TYPE_EQ:
+    return PREC_EQ;
+  case TOKEN_TYPE_NEQ:
+    return PREC_NEQ;
+  case TOKEN_TYPE_LEFT_PAREN:
+    return PREC_LPAREN;
+  case TOKEN_TYPE_RIGHT_PAREN:
+    return open_parens > 0 ? PREC_RPAREN : PREC_DOLLAR;
+  default:
+    return PREC_DOLLAR;
+  }
+}
+
+// presun terminalu i na zasobnik
+static int shift_operand(ExprItem *item) {
+  item->tok_index = pos;
+  bool is_call = check(TOKEN_TYPE_IDENTIFIER) &&
+                 tokens[pos + 1].type == TOKEN_TYPE_LEFT_PAREN;
+  if (is_call || check(TOKEN_TYPE_PLUS) || check(TOKEN_TYPE_MINUS)) {
+    item->typed = true;
+    return parse_term(&item->type);
+  }
+  return next_token();
+}
+
+// semantika pravidla E -> i
+static int reduce_operand(const ExprItem *i, DataType *out_type) {
+  if (i->typed) {
+    *out_type = i->type;
+    return SCANNER_TOKEN_OK;
+  }
+
+  const Token *tok = &tokens[i->tok_index];
+  switch (tok->type) {
+  case TOKEN_TYPE_INT_NUMBER:
+    *out_type = TYPE_INT;
+    break;
+  case TOKEN_TYPE_DOUBLE_NUMBER:
+    *out_type = TYPE_DOUBLE;
+    break;
+  case TOKEN_TYPE_STRING:
+    *out_type = TYPE_STRING;
+    break;
+  default: {
+    Symbol *var = symtable_find_var(symtab, tok->attribute.string);
+    if (!var)
+      return ERROR_SEM_UNDEF; 
+    *out_type = var->data.var.type;
+    break;
+  }
+  }
+  return SCANNER_TOKEN_OK;
+}
+
+// Redukcia - vyberie <y z vrchu zasobnika, najde pravidlo E -> y a vykona semtaticku akciu
+static int reduce_rule(ExprStack *s) {
+  size_t h = s->top;
+  while (h > 0 && s->items[h - 1].kind != ITEM_HANDLE)
+    h--;
+  if (h == 0)
+    return ERROR_SYNTAX;
+
+  const ExprItem *y = &s->items[h];
+  size_t len = s->top - h;
+  ExprItem result = {.kind = ITEM_NONTERM, .type = TYPE_UNDEF};
+  int res = SCANNER_TOKEN_OK;
+
+  if (len == 1 && is_term(&y[0], PREC_I)) {
+    res = reduce_operand(&y[0], &result.type);
+
+  } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
+             is_term(&y[1], PREC_RPAREN)) {
+    result.type = TYPE_UNIT;
+
+  } else if (len == 3 && is_term(&y[0], PREC_LPAREN) &&
+             y[1].kind == ITEM_NONTERM && is_term(&y[2], PREC_RPAREN)) {
+    result.type = y[1].type;
+
+  } else if (len == 3 && y[0].kind == ITEM_NONTERM && is_binary_op(&y[1]) &&
+             y[2].kind == ITEM_NONTERM) {
+    res = reduce_operation(y[1].op, y[0].type, y[2].type, &result.type);
+
+  } else {
+    return ERROR_SYNTAX;
+  }
+
+  if (res != SCANNER_TOKEN_OK)
+    return res;
+
+  s->top = h - 1;
+  return stack_push(s, result);
 }
 
 static int parse_expression_inner(ExprStack *s, DataType *out_type);
 
-// precedencna analyza vyrazou
+// precedencna analyza vyrazu, out_type = typ vysledku
 static int parse_expression(DataType *out_type) {
-  ExprStack s = {NULL, NULL, -1, -1, EXPR_STACK_INIT, EXPR_STACK_INIT};
-  s.ops = malloc(EXPR_STACK_INIT * sizeof(TokenType));
-  s.types = malloc(EXPR_STACK_INIT * sizeof(DataType));
+  ExprStack s = {NULL, 0, EXPR_STACK_INIT};
+  s.items = malloc(EXPR_STACK_INIT * sizeof(ExprItem));
 
   int res = ERROR_INTERNAL;
-  if (s.ops && s.types)
+  if (s.items)
     res = parse_expression_inner(&s, out_type);
 
-  free(s.ops);
-  free(s.types);
+  free(s.items);
   return res;
 }
 
-// telo precedencnej analyzy, zasobniky uvolni volajuci
+// hlavna slucka, zasobnik uvolni volajuci
 static int parse_expression_inner(ExprStack *s, DataType *out_type) {
-
-  // koniec vyrazu na spodok zasobnika ($)
-  int res = push_op(s, TOKEN_TYPE_EOL);
+  ExprItem bottom = {.kind = ITEM_TERM, .sym = PREC_DOLLAR};
+  int res = stack_push(s, bottom);
   if (res != SCANNER_TOKEN_OK)
     return res;
 
-  // priznak, ci ocakavame operand
-  bool expect_opd = true;
-
-  // otvorene (
   int open_parens = 0;
 
   while (1) {
+    PrecSymbol b = token_to_prec(s, open_parens);
+    size_t a_idx = top_terminal(s);
+    PrecSymbol a = s->items[a_idx].sym;
+    char action = prec_table[a][b];
 
-    // zistime ci je + alebo - unarne
-    bool is_unary = (current_tok.type == TOKEN_TYPE_PLUS ||
-                     current_tok.type == TOKEN_TYPE_MINUS) &&
-                    expect_opd;
-
-    // ak na vstupe je operand (cislo, premenna) alebo unary operator
-    if (current_tok.type == TOKEN_TYPE_INT_NUMBER ||
-        current_tok.type == TOKEN_TYPE_DOUBLE_NUMBER ||
-        current_tok.type == TOKEN_TYPE_STRING ||
-        current_tok.type == TOKEN_TYPE_IDENTIFIER || is_unary) {
-
-      // operand za operandom
-      if (!expect_opd)
-        return ERROR_SYNTAX;
-
-      DataType t;
-      res = parse_term(&t); // nacitanie operandu
-      if (res != SCANNER_TOKEN_OK)
-        return res;
-
-      res = push_type(s, t);
-      if (res != SCANNER_TOKEN_OK)
-        return res;
-      expect_opd = false; // po operande uz ocakavame operator
-      continue;
-    }
-
-    // ak je na vstupe operator (alebo koniec)
-    TokenType curr_op = current_tok.type;
-
-    // zistime co je na vrchu zasobnika
-    TokenType top_op = s->ops[s->op_top];
-
-    // ziskame indexy pre precedencnu tabulku
-    int top_index = get_op_index(top_op);
-    int curr_index = get_op_index(curr_op);
-
-    // ak je nieco, co neni v tabulke, vezmeme to ako koniec vyrazu
-    if (curr_index == -1)
-      curr_index = 12; // EOL
-
-    // cudzia ) je koniec
-    if (curr_op == TOKEN_TYPE_RIGHT_PAREN && open_parens == 0)
-      curr_index = 12;
-
-    // chyba operand
-    if (expect_opd && curr_index != 10 && curr_index != 11)
-      return ERROR_SYNTAX;
-
-    // ( za operandom
-    if (!expect_opd && curr_index == 10)
-      return ERROR_SYNTAX;
-
-    // ak sme na konci vyrazu ($), skoncime
-    if (top_op == TOKEN_TYPE_EOL && curr_index == 12) {
-      break;
-    }
-
-    char action = prec_table[top_index][curr_index];
-
-    if (action == '<') {
-      // SHIFT: posunieme operator na zasobnik a precitame dalsi token
-      res = push_op(s, curr_op);
-      if (res != SCANNER_TOKEN_OK)
-        return res;
-      if (curr_op == TOKEN_TYPE_LEFT_PAREN)
-        open_parens++;
-      expect_opd = true; // po operatori ocakavame operand
-      res = next_token();
-      if (res != SCANNER_TOKEN_OK)
-        return res;
-    } else if (action == '=') {
-      // MATCH: zahodine '(' zo zasobnika a precitame ')'
-      s->op_top--;
-      open_parens--;
-
-      // prazdne () = Unit
-      if (expect_opd) {
-        res = push_type(s, TYPE_UNIT);
+    if (action == '=' || action == '<') {
+      if (action == '<') {
+        res = insert_handle(s, a_idx);
         if (res != SCANNER_TOKEN_OK)
           return res;
       }
 
-      expect_opd = false; // po uzatvoreni zatvorky mame hotovu hodnotu
-      res = next_token();
+      ExprItem item = {.kind = ITEM_TERM,
+                       .sym = b,
+                       .op = current_tok.type,
+                       .type = TYPE_UNDEF};
+      if (b == PREC_I) {
+        res = shift_operand(&item);
+      } else {
+        if (b == PREC_LPAREN)
+          open_parens++;
+        else if (b == PREC_RPAREN)
+          open_parens--;
+        res = next_token();
+      }
       if (res != SCANNER_TOKEN_OK)
         return res;
+
+      res = stack_push(s, item);
+      if (res != SCANNER_TOKEN_OK)
+        return res;
+
     } else if (action == '>') {
-
-      TokenType op = s->ops[s->op_top--]; // zobereme operator
-      if (s->type_top < 1)
-        return ERROR_SYNTAX; // chyba, malo operandov
-
-      DataType right = s->types[s->type_top--];
-      DataType left = s->types[s->type_top--];
-      DataType result;
-
-      // sematicka kontrola pre operator
-      res = reduce_operation(op, left, right, &result);
+      res = reduce_rule(s);
       if (res != SCANNER_TOKEN_OK)
         return res;
 
-      s->types[++s->type_top] = result; // vysledok dame spat na zasobnik
-      expect_opd = false;               // vysledok redukcie je operand
     } else {
-      // chyba v precedencnej tabulke
+      if (a == PREC_DOLLAR && b == PREC_DOLLAR)
+        break;
       return ERROR_SYNTAX;
     }
   }
 
-  // prave jeden vysledny typ na zasobniku by mal ostat
-  if (s->type_top != 0)
+  if (s->top != 2 || s->items[1].kind != ITEM_NONTERM)
     return ERROR_SYNTAX;
 
-  *out_type = s->types[0];
+  *out_type = s->items[1].type;
   return SCANNER_TOKEN_OK;
 }
 
