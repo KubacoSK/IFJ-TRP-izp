@@ -148,6 +148,66 @@ static void test_variables_and_scopes(void) {
   symtable_free(&st);
 }
 
+// AI (Claude Code, Claude Opus 5.5)
+// Prompt: "Doplnit testy na jedinecne ID premennej (VarData.id): start
+// pocitadla, jedinecnost v rozsahu, zatienenie, surodenecke rozsahy a ID
+// vratene pri vyhladani."
+// Test jedinecneho ID premennej (premenovanie x -> x$id v generatore)
+static void test_variable_ids(void) {
+  printf("\n--- Test: Jedinecne ID premennych ---\n");
+  Symtable st;
+  symtable_init(&st);
+  symtable_push_scope(&st);
+
+  Symbol *a = symtable_add_var(&st, "a", TYPE_INT, true, true);
+  Symbol *b = symtable_add_var(&st, "b", TYPE_INT, true, true);
+  TEST_ASSERT(a != NULL && a->data.var.id == 1,
+              "Prva premenna po inicializacii ma ID 1");
+  TEST_ASSERT(b != NULL && b->data.var.id != a->data.var.id,
+              "Dve premenne v jednom rozsahu maju rozne ID");
+
+  // Zatienenie: rovnake meno vo vnorenom rozsahu
+  Symbol *x_outer = symtable_add_var(&st, "x", TYPE_INT, true, true);
+  symtable_push_scope(&st);
+  Symbol *x_then = symtable_add_var(&st, "x", TYPE_STRING, true, true);
+  TEST_ASSERT(x_outer != NULL && x_then != NULL &&
+                  x_then->data.var.id != x_outer->data.var.id,
+              "Zatienene x ma ine ID ako vonkajsie x");
+
+  Symbol *found = symtable_find_var(&st, "x");
+  TEST_ASSERT(found != NULL && found->data.var.id == x_then->data.var.id,
+              "Vyhladanie x vo vnutornom rozsahu vrati ID zatienenej x");
+
+  // ID sa ulozi, pop_scope symbol x_then uvolni
+  unsigned then_id = x_then ? x_then->data.var.id : 0;
+
+  // Surodenecke rozsahy (vetvy then/else) maju rovnaku hlbku
+  symtable_pop_scope(&st);
+  symtable_push_scope(&st);
+  Symbol *x_else = symtable_add_var(&st, "x", TYPE_STRING, true, true);
+  TEST_ASSERT(x_else != NULL && x_else->data.var.id != x_outer->data.var.id,
+              "x v druhom surodeneckom rozsahu ma ine ID ako vonkajsie x");
+  TEST_ASSERT(x_else != NULL && x_else->data.var.id != then_id,
+              "x v surodeneckych rozsahoch (then/else) maju rozne ID");
+  symtable_pop_scope(&st);
+
+  found = symtable_find_var(&st, "x");
+  TEST_ASSERT(found != NULL && found->data.var.id == x_outer->data.var.id,
+              "Po opusteni rozsahu vyhladanie x vrati ID vonkajsej x");
+
+  symtable_pop_scope(&st);
+  symtable_free(&st);
+
+  // nova tabulka zacina pocitadlo znova od 1
+  symtable_init(&st);
+  symtable_push_scope(&st);
+  Symbol *c = symtable_add_var(&st, "c", TYPE_INT, true, true);
+  TEST_ASSERT(c != NULL && c->data.var.id == 1,
+              "Po novej inicializacii zacina ID znova od 1");
+  symtable_pop_scope(&st);
+  symtable_free(&st);
+}
+
 int main(void) {
   printf(
       COLOR_BLUE
@@ -161,6 +221,7 @@ int main(void) {
   test_init_table();
   test_functions();
   test_variables_and_scopes();
+  test_variable_ids();
 
   printf(
       "\n" COLOR_BLUE
