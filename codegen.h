@@ -27,8 +27,8 @@
 void gen_function_begin(int idx, const char *name, bool is_main);
 
 /**
- * Epilog aktualnej funkcie: na zasobniku necha Unit (nil@nil), POPFRAME,
- * RETURN.
+ * Epilog aktualnej funkcie: POPFRAME, RETURN. Vysledok tela (hodnota
+ * posledneho prikazu) uz je na zasobniku.
  */
 void gen_function_end(void);
 
@@ -83,6 +83,33 @@ void gen_binary(TokenType op, DataType left, DataType right);
 
 /** Unarne + / - nad hodnotou na vrchu zasobnika typu Int alebo Double. */
 void gen_unary(TokenType op, DataType type);
+
+/**
+ * Zahodenie hodnoty na vrchu zasobnika (POPS LF@%t1). Kazdy prikaz necha
+ * prave jednu hodnotu, pred dalsim prikazom v bloku sa zahodi.
+ */
+void gen_drop(void);
+
+/** Nove cislo pre navestia if/while (globalne pocitadlo). */
+unsigned gen_new_label(void);
+
+/** Podmienka if je na zasobniku: pri false skok na $if$n$else. */
+void gen_if_cond(unsigned n);
+
+/** Koniec vetvy then: skok na koniec, zaciatok vetvy else. */
+void gen_if_else(unsigned n);
+
+/** Koniec if, na zasobniku je hodnota vykonanej vetvy. */
+void gen_if_end(unsigned n);
+
+/** Zaciatok cyklu while (pred podmienkou). */
+void gen_while_start(unsigned n);
+
+/** Podmienka while je na zasobniku: pri false skok na koniec cyklu. */
+void gen_while_cond(unsigned n);
+
+/** Koniec tela while: zahodi hodnotu tela, skok na zaciatok, vysledok Unit. */
+void gen_while_end(unsigned n);
 
 /**
  * Volanie vstavanej funkcie. Argumenty su uz na zasobniku zlava doprava,

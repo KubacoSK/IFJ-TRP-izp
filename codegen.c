@@ -34,6 +34,7 @@ static size_t func_cap = 0;
 static int current = -1;       // aktualna funkcia
 static int main_idx = -1;      // funkcia s @main
 static bool gen_error = false; // chyba alokacie pocas generovania
+static unsigned label_count = 0; // pocitadlo navesti if/while
 
 // pridanie formatovaneho riadku do bufferu
 static void buf_vappend(StrBuf *b, const char *fmt, va_list args) {
@@ -99,8 +100,7 @@ void gen_function_begin(int idx, const char *name, bool is_main) {
 }
 
 void gen_function_end(void) {
-  // vysledok funkcie je zatial vzdy Unit (hodnoty tela doplni krok 5)
-  gen_emit("PUSHS nil@nil");
+  // vysledok tela je na zasobniku (konverzie a explicitny Unit doplni krok 5)
   gen_emit("POPFRAME");
   gen_emit("RETURN");
 }
@@ -259,6 +259,36 @@ void gen_unary(TokenType op, DataType type) {
   gen_emit("MULS");
 }
 
+void gen_drop(void) { gen_emit("POPS LF@%%t1"); }
+
+unsigned gen_new_label(void) { return ++label_count; }
+
+void gen_if_cond(unsigned n) {
+  gen_emit("PUSHS bool@true");
+  gen_emit("JUMPIFNEQS $if$%u$else", n);
+}
+
+void gen_if_else(unsigned n) {
+  gen_emit("JUMP $if$%u$end", n);
+  gen_emit("LABEL $if$%u$else", n);
+}
+
+void gen_if_end(unsigned n) { gen_emit("LABEL $if$%u$end", n); }
+
+void gen_while_start(unsigned n) { gen_emit("LABEL $while$%u$start", n); }
+
+void gen_while_cond(unsigned n) {
+  gen_emit("PUSHS bool@true");
+  gen_emit("JUMPIFNEQS $while$%u$end", n);
+}
+
+void gen_while_end(unsigned n) {
+  gen_drop(); // hodnota tela sa v cykle nepouzije
+  gen_emit("JUMP $while$%u$start", n);
+  gen_emit("LABEL $while$%u$end", n);
+  gen_push_unit(); // cyklus ako prikaz ma hodnotu Unit
+}
+
 // print(x): hodnota je na zasobniku, vysledok je Unit
 static void gen_print(DataType arg_type) {
   gen_emit("POPS LF@%%t1");
@@ -319,4 +349,5 @@ void gen_free(void) {
   current = -1;
   main_idx = -1;
   gen_error = false;
+  label_count = 0;
 }

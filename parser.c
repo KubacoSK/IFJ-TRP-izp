@@ -953,6 +953,7 @@ static int parse_var_def(void) {
     gen_convert_top();
   gen_defvar(var->name, var->data.var.id);
   gen_pop_var(var->name, var->data.var.id);
+  gen_push_unit(); // definicia ako prikaz ma hodnotu Unit
 
   free(var_name); // symtable urobilo vlastnu kopiu, toto teda mozeme uvolnit
   return expect_stmt_end();
@@ -1035,6 +1036,7 @@ static int parse_id_statement(StmtResult *out) {
       gen_convert_top(); // Int -> Double
     }
     gen_pop_var(var->name, var->data.var.id);
+    gen_push_unit(); // priradenie ako prikaz ma hodnotu Unit
 
     set_result(out, TYPE_UNIT); // priradenie = Unit
     free(id_name);
@@ -1059,6 +1061,9 @@ static int parse_if(StmtResult *out) {
   if (cond_type != TYPE_BOOL)
     return ERROR_SEM_TYPE;
 
+  unsigned label = gen_new_label();
+  gen_if_cond(label);
+
   res = expect_kw(KEYWORD_THEN);
   if (res != SCANNER_TOKEN_OK)
     return res;
@@ -1072,6 +1077,8 @@ static int parse_if(StmtResult *out) {
   if (res != SCANNER_TOKEN_OK)
     return res;
 
+  gen_if_else(label);
+
   res = expect_kw(KEYWORD_ELSE);
   if (res != SCANNER_TOKEN_OK)
     return res;
@@ -1084,6 +1091,8 @@ static int parse_if(StmtResult *out) {
   res = parse_block(NULL, 0, &else_res);
   if (res != SCANNER_TOKEN_OK)
     return res;
+
+  gen_if_end(label); // na zasobniku je hodnota vykonanej vetvy
 
   // if nie je vyraz, rozhoduju vetvy
   out->type = TYPE_UNIT;
@@ -1099,6 +1108,10 @@ static int parse_while(void) {
   if (res != SCANNER_TOKEN_OK)
     return res;
 
+  // podmienka sa testuje na zaciatku kazdej iteracie
+  unsigned label = gen_new_label();
+  gen_while_start(label);
+
   DataType cond_type;
   res = parse_expression(&cond_type);
   if (res != SCANNER_TOKEN_OK)
@@ -1106,6 +1119,8 @@ static int parse_while(void) {
 
   if (cond_type != TYPE_BOOL)
     return ERROR_SEM_TYPE;
+
+  gen_while_cond(label);
 
   res = expect_kw(KEYWORD_DO);
   if (res != SCANNER_TOKEN_OK)
@@ -1117,7 +1132,12 @@ static int parse_while(void) {
 
   // vysledok tela cyklu sa neprenasa
   StmtResult body_res;
-  return parse_block(NULL, 0, &body_res);
+  res = parse_block(NULL, 0, &body_res);
+  if (res != SCANNER_TOKEN_OK)
+    return res;
+
+  gen_while_end(label);
+  return SCANNER_TOKEN_OK;
 }
 
 // Prikaz navratu: return [expr] EOL
@@ -1132,6 +1152,8 @@ static int parse_return(void) {
     res = parse_expression(&ret_type);
     if (res != SCANNER_TOKEN_OK)
       return res;
+  } else {
+    gen_push_unit(); // return bez hodnoty vracia Unit
   }
 
   // return bez typu v hlavicke
@@ -1221,6 +1243,10 @@ static int parse_block(Param *params, size_t param_count, StmtResult *out) {
         goto cleanup;
       continue;
     }
+
+    // kazdy prikaz necha jednu hodnotu, predchadzajuca sa zahodi
+    if (has_statements)
+      gen_drop();
 
     has_statements = true;
     res = parse_statement(out); // ; spracuje prikaz, out prepise dalsi
