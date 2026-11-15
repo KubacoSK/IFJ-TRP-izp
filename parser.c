@@ -486,7 +486,7 @@ typedef struct {
   TokenType op;     
   DataType type;    
   size_t tok_index; 
-  bool typed;       
+  bool is_call;       
 } ExprItem;
 
 // zasobnik precedencnej analyzy
@@ -658,7 +658,7 @@ static int shift_operand(ExprItem *item) {
   bool is_call = check(TOKEN_TYPE_IDENTIFIER) &&
                  tokens[pos + 1].type == TOKEN_TYPE_LEFT_PAREN;
   if (is_call) {
-    item->typed = true;
+    item->is_call = true;
     return parse_call(&item->type);
   }
   return next_token();
@@ -666,7 +666,7 @@ static int shift_operand(ExprItem *item) {
 
 // semantika pravidla E -> i
 static int reduce_operand(const ExprItem *i, DataType *out_type) {
-  if (i->typed) {
+  if (i->is_call) {
     *out_type = i->type;
     return SCANNER_TOKEN_OK;
   }
@@ -739,6 +739,25 @@ static int reduce_rule(ExprStack *s) {
   return stack_push(s, result);
 }
 
+#ifdef PREC_DEBUG
+// ladiaci vypis zasobnika na stderr (make CFLAGS+=-DPREC_DEBUG)
+static void debug_stack(const ExprStack *s, PrecSymbol b, char action) {
+  static const char *names[PREC_COUNT] = {"i",  "+",  "-", "*",  "/",
+                                          "<",  "<=", ">", ">=", "==",
+                                          "!=", "(",  ")", "u",  "$"};
+  for (size_t i = 0; i < s->top; i++) {
+    const ExprItem *it = &s->items[i];
+    if (it->kind == ITEM_HANDLE)
+      fprintf(stderr, "< ");
+    else if (it->kind == ITEM_NONTERM)
+      fprintf(stderr, "E ");
+    else
+      fprintf(stderr, "%s ", names[it->sym]);
+  }
+  fprintf(stderr, "   | b = %s, akcia %c\n", names[b], action);
+}
+#endif
+
 static int parse_expression_inner(ExprStack *s, DataType *out_type);
 
 // precedencna analyza vyrazu, out_type = typ vysledku
@@ -768,6 +787,10 @@ static int parse_expression_inner(ExprStack *s, DataType *out_type) {
     size_t a_idx = top_terminal(s);
     PrecSymbol a = s->items[a_idx].sym;
     char action = prec_table[a][b];
+
+    #ifdef PREC_DEBUG
+    debug_stack(s, b, action);
+    #endif
 
     if (action == '=' || action == '<') {
       if (action == '<') {
