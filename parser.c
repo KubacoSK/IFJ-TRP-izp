@@ -663,6 +663,8 @@ static int parse_call(DataType *out_type) {
   // argumenty su na zasobniku zlava doprava
   if (func->data.func.is_builtin)
     gen_builtin_call(func->name, arg_types, arg_count);
+  else
+    gen_call(func->name);
 
   *out_type = func->data.func.return_type;
   return expect(TOKEN_TYPE_RIGHT_PAREN);
@@ -1148,7 +1150,8 @@ static int parse_return(void) {
 
   DataType ret_type = TYPE_UNIT; // Predvolene, ak nasleduje EOL
 
-  if (!at_stmt_end()) {
+  bool has_value = !at_stmt_end();
+  if (has_value) {
     res = parse_expression(&ret_type);
     if (res != SCANNER_TOKEN_OK)
       return res;
@@ -1172,6 +1175,15 @@ static int parse_return(void) {
       return ERROR_SEM_TYPE; // chyba 6
     }
   }
+
+  // navratova hodnota na zasobniku, potom navrat
+  if (current_func_explicit_unit && has_value) {
+    gen_drop(); // pri explicitnom Unit sa hodnota zahodi
+    gen_push_unit();
+  } else if (current_func_return_type == TYPE_DOUBLE && ret_type == TYPE_INT) {
+    gen_convert_top();
+  }
+  gen_return();
 
   return expect_stmt_end();
 }
@@ -1212,6 +1224,18 @@ static int parse_statement(StmtResult *out) {
   return ERROR_SYNTAX;
 }
 
+// parametre su uz v aktualnom scope: DEFVAR a vyber argumentov zo zasobnika
+// odzadu (volajuci ich vlozil zlava doprava)
+static void params_to_frame(const Param *params, size_t param_count) {
+  for (size_t i = param_count; i > 0; i--) {
+    Symbol *p = symtable_find_var_current_scope(symtab, params[i - 1].name);
+    if (p) {
+      gen_defvar(p->name, p->data.var.id);
+      gen_pop_var(p->name, p->data.var.id);
+    }
+  }
+}
+
 // Spracovanie bloku prikazov ohraniceneho INDENT a DEDENT
 // out = vysledok posledneho prikazu priamo v bloku
 static int parse_block(Param *params, size_t param_count, StmtResult *out) {
@@ -1231,6 +1255,7 @@ static int parse_block(Param *params, size_t param_count, StmtResult *out) {
         return ERROR_INTERNAL;
       }
     }
+    params_to_frame(params, param_count);
   }
   bool has_statements = false;
   after_semicolon = false; // novy riadok
@@ -1555,6 +1580,17 @@ static int parse_function(bool is_main) {
       if (block_res == SCANNER_TOKEN_OK && !explicit_type && !is_main) {
         func_sym->data.func.return_type = inferred;
       }
+
+      // vysledok tela je hodnota posledneho prikazu na zasobniku
+      if (block_res == SCANNER_TOKEN_OK) {
+        if (explicit_unit) {
+          gen_drop(); // pri explicitnom Unit sa hodnota zahodi
+          gen_push_unit();
+        } else if (return_type == TYPE_DOUBLE && body.type == TYPE_INT &&
+                   !body.ends_with_if && !body.all_return) {
+          gen_convert_top();
+        }
+      }
     }
   }
 
@@ -1572,6 +1608,7 @@ static int parse_function(bool is_main) {
         return ERROR_INTERNAL;
       }
     }
+    params_to_frame(temp_params, param_count);
 
     DataType expr_type;
     res = parse_expression(&expr_type);
@@ -1601,6 +1638,14 @@ static int parse_function(bool is_main) {
     // ulozenie odvodeneho typu
     if (!explicit_type && !is_main)
       func_sym->data.func.return_type = expr_type;
+
+    // vysledok jednoriadkoveho tela je hodnota vyrazu
+    if (explicit_unit) {
+      gen_drop();
+      gen_push_unit();
+    } else if (return_type == TYPE_DOUBLE && expr_type == TYPE_INT) {
+      gen_convert_top();
+    }
 
     block_res = expect(TOKEN_TYPE_EOL);
 

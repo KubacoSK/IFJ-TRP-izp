@@ -99,11 +99,17 @@ void gen_function_begin(int idx, const char *name, bool is_main) {
   current = idx;
 }
 
-void gen_function_end(void) {
-  // vysledok tela je na zasobniku (konverzie a explicitny Unit doplni krok 5)
+void gen_return(void) {
   gen_emit("POPFRAME");
   gen_emit("RETURN");
 }
+
+void gen_function_end(void) {
+  // vysledok tela (po pripadnej konverzii) je na zasobniku
+  gen_return();
+}
+
+void gen_call(const char *name) { gen_emit("CALL $f$%s", name); }
 
 void gen_select(int idx) {
   current = ((size_t)idx < func_cap) ? idx : -1;

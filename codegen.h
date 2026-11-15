@@ -33,6 +33,18 @@ void gen_function_begin(int idx, const char *name, bool is_main);
 void gen_function_end(void);
 
 /**
+ * Navrat z funkcie (prikaz return): POPFRAME, RETURN. Navratova hodnota
+ * uz je na zasobniku.
+ */
+void gen_return(void);
+
+/**
+ * Volanie uzivatelskej funkcie: argumenty su na zasobniku zlava doprava,
+ * volana funkcia ich vyberie odzadu a necha jeden vysledok.
+ */
+void gen_call(const char *name);
+
+/**
  * Prepnutie aktualnej funkcie (navrat po analyze na poziadanie).
  * Zaporny index = ziadna funkcia, instrukcie sa zahodia.
  */
