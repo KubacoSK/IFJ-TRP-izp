@@ -319,9 +319,7 @@ static int analyze_function(int idx) {
   current_func = idx;
   funcs[idx].state = FUNC_IN_PROGRESS;
 
-  // AI (Claude Code, Claude Opus 5.5)
-  // Prompt: "Krok 1 z Generator postup.md: napojenie generatora na parser,
-  // kazda funkcia ma vlastne buffre, navrat po analyze na poziadanie."
+
   gen_function_begin(idx, funcs[idx].sym->name, funcs[idx].is_main);
 
   int res = parse_function(funcs[idx].is_main);
@@ -616,6 +614,7 @@ static int parse_call(DataType *out_type) {
     return res;
 
   size_t arg_count = 0;
+  DataType arg_types[BUILTIN_MAX_ARGS]; // typy argumentov pre generator
   if (!check(TOKEN_TYPE_RIGHT_PAREN)) {
     while (1) {
       // argument skonci na ',' alebo na neparovej ')'
@@ -635,8 +634,10 @@ static int parse_call(DataType *out_type) {
       // typ argumentu, povolena konverzia Int -> Double
       DataType expected = func->data.func.params[arg_count].type;
       if (expected != TYPE_ANY && !is_compatible(expected, arg_type))
-        return ERROR_SEM_PARAM; 
+        return ERROR_SEM_PARAM;
 
+      if (arg_count < BUILTIN_MAX_ARGS)
+        arg_types[arg_count] = arg_type;
       arg_count++;
 
       if (check(TOKEN_TYPE_COMMA)) {
@@ -653,7 +654,11 @@ static int parse_call(DataType *out_type) {
 
   // malo argumentov
   if (arg_count < func->data.func.param_count)
-    return ERROR_SEM_PARAM; 
+    return ERROR_SEM_PARAM;
+
+  // argumenty su na zasobniku zlava doprava
+  if (func->data.func.is_builtin)
+    gen_builtin_call(func->name, arg_types, arg_count);
 
   *out_type = func->data.func.return_type;
   return expect(TOKEN_TYPE_RIGHT_PAREN);
@@ -682,12 +687,15 @@ static int reduce_operand(const ExprItem *i, DataType *out_type) {
   switch (tok->type) {
   case TOKEN_TYPE_INT_NUMBER:
     *out_type = TYPE_INT;
+    gen_push_int(tok->attribute.integer);
     break;
   case TOKEN_TYPE_DOUBLE_NUMBER:
     *out_type = TYPE_DOUBLE;
+    gen_push_double(tok->attribute.decimal);
     break;
   case TOKEN_TYPE_STRING:
     *out_type = TYPE_STRING;
+    gen_push_string(tok->attribute.string);
     break;
   default: {
     Symbol *var = symtable_find_var(symtab, tok->attribute.string);
@@ -726,6 +734,7 @@ static int reduce_rule(ExprStack *s) {
     } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
              is_term(&y[1], PREC_RPAREN)) {
     result.type = TYPE_UNIT;
+    gen_push_unit();
 
   } else if (len == 3 && is_term(&y[0], PREC_LPAREN) &&
              y[1].kind == ITEM_NONTERM && is_term(&y[2], PREC_RPAREN)) {
