@@ -636,6 +636,10 @@ static int parse_call(DataType *out_type) {
       if (expected != TYPE_ANY && !is_compatible(expected, arg_type))
         return ERROR_SEM_PARAM;
 
+      // argument je na vrchu zasobnika, konverzia hned
+      if (expected == TYPE_DOUBLE && arg_type == TYPE_INT)
+        gen_convert_top();
+
       if (arg_count < BUILTIN_MAX_ARGS)
         arg_types[arg_count] = arg_type;
       arg_count++;
@@ -700,8 +704,9 @@ static int reduce_operand(const ExprItem *i, DataType *out_type) {
   default: {
     Symbol *var = symtable_find_var(symtab, tok->attribute.string);
     if (!var)
-      return ERROR_SEM_UNDEF; 
+      return ERROR_SEM_UNDEF;
     *out_type = var->data.var.type;
+    gen_push_var(var->name, var->data.var.id);
     break;
   }
   }
@@ -730,6 +735,7 @@ static int reduce_rule(ExprStack *s) {
     if(y[1].type != TYPE_INT && y[1].type != TYPE_DOUBLE)
       return ERROR_SEM_TYPE;
     result.type = y[1].type;
+    gen_unary(y[0].op, y[1].type);
 
     } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
              is_term(&y[1], PREC_RPAREN)) {
@@ -743,6 +749,8 @@ static int reduce_rule(ExprStack *s) {
   } else if (len == 3 && y[0].kind == ITEM_NONTERM && is_binary_op(&y[1]) &&
              y[2].kind == ITEM_NONTERM) {
     res = reduce_operation(y[1].op, y[0].type, y[2].type, &result.type);
+    if (res == SCANNER_TOKEN_OK)
+      gen_binary(y[1].op, y[0].type, y[2].type);
 
   } else {
     return ERROR_SYNTAX;
@@ -934,10 +942,17 @@ static int parse_var_def(void) {
   }
 
   // pridanie do tabulky symbolov
-  if (symtable_add_var(symtab, var_name, var_type, is_constant, true) == NULL) {
+  Symbol *var = symtable_add_var(symtab, var_name, var_type, is_constant, true);
+  if (var == NULL) {
     free(var_name);
     return ERROR_INTERNAL;
   }
+
+  // DEFVAR na zaciatok funkcie, hodnota vyrazu zo zasobnika do premennej
+  if (var_type == TYPE_DOUBLE && expr_type == TYPE_INT)
+    gen_convert_top();
+  gen_defvar(var->name, var->data.var.id);
+  gen_pop_var(var->name, var->data.var.id);
 
   free(var_name); // symtable urobilo vlastnu kopiu, toto teda mozeme uvolnit
   return expect_stmt_end();
@@ -1017,7 +1032,9 @@ static int parse_id_statement(StmtResult *out) {
         free(id_name);
         return ERROR_SEM_TYPE; // chyba 6
       }
+      gen_convert_top(); // Int -> Double
     }
+    gen_pop_var(var->name, var->data.var.id);
 
     set_result(out, TYPE_UNIT); // priradenie = Unit
     free(id_name);

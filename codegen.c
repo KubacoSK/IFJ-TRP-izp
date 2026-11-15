@@ -163,6 +163,102 @@ void gen_push_string(const char *value) {
 
 void gen_push_unit(void) { gen_emit("PUSHS nil@nil"); }
 
+void gen_defvar(const char *name, unsigned id) {
+  gen_def("DEFVAR LF@%s$%u", name, id);
+}
+
+void gen_push_var(const char *name, unsigned id) {
+  gen_emit("PUSHS LF@%s$%u", name, id);
+}
+
+void gen_pop_var(const char *name, unsigned id) {
+  gen_emit("POPS LF@%s$%u", name, id);
+}
+
+void gen_convert_top(void) { gen_emit("INT2FLOATS"); }
+
+// neostra nerovnost: (a strict b) OR (a == b), operandy sa zduplikuju
+static void gen_rel_or_eq(const char *strict) {
+  gen_emit("POPS LF@%%t2");
+  gen_emit("POPS LF@%%t1");
+  gen_emit("PUSHS LF@%%t1");
+  gen_emit("PUSHS LF@%%t2");
+  gen_emit("%s", strict);
+  gen_emit("PUSHS LF@%%t1");
+  gen_emit("PUSHS LF@%%t2");
+  gen_emit("EQS");
+  gen_emit("ORS");
+}
+
+void gen_binary(TokenType op, DataType left, DataType right) {
+  // Int -> Double, ak je druhy operand Double
+  if (left == TYPE_INT && right == TYPE_DOUBLE) {
+    // lavy je pod pravym: pravy odlozit, konvertovat, vratit
+    gen_emit("POPS LF@%%t1");
+    gen_emit("INT2FLOATS");
+    gen_emit("PUSHS LF@%%t1");
+  } else if (left == TYPE_DOUBLE && right == TYPE_INT) {
+    gen_convert_top();
+  }
+
+  switch (op) {
+  case TOKEN_TYPE_PLUS:
+    if (left == TYPE_STRING) {
+      // CONCAT nema zasobnikovu verziu
+      gen_emit("POPS LF@%%t2");
+      gen_emit("POPS LF@%%t1");
+      gen_emit("CONCAT LF@%%t1 LF@%%t1 LF@%%t2");
+      gen_emit("PUSHS LF@%%t1");
+    } else {
+      gen_emit("ADDS");
+    }
+    break;
+  case TOKEN_TYPE_MINUS:
+    gen_emit("SUBS");
+    break;
+  case TOKEN_TYPE_MUL:
+    gen_emit("MULS");
+    break;
+  case TOKEN_TYPE_DIV:
+    // Int / Int je celociselne delenie (zaokruhluje k nule)
+    gen_emit("%s", (left == TYPE_INT && right == TYPE_INT) ? "IDIVS" : "DIVS");
+    break;
+  case TOKEN_TYPE_LT:
+    gen_emit("LTS");
+    break;
+  case TOKEN_TYPE_GT:
+    gen_emit("GTS");
+    break;
+  case TOKEN_TYPE_LEQ:
+    gen_rel_or_eq("LTS");
+    break;
+  case TOKEN_TYPE_GEQ:
+    gen_rel_or_eq("GTS");
+    break;
+  case TOKEN_TYPE_EQ:
+    gen_emit("EQS");
+    break;
+  case TOKEN_TYPE_NEQ:
+    gen_emit("EQS");
+    gen_emit("NOTS");
+    break;
+  default:
+    break;
+  }
+}
+
+void gen_unary(TokenType op, DataType type) {
+  if (op != TOKEN_TYPE_MINUS)
+    return; // unarne + hodnotu nemeni
+
+  // IFJcode26 nema negaciu: nasobenie -1 (pri Double zachova aj -0.0)
+  if (type == TYPE_DOUBLE)
+    gen_emit("PUSHS float@%a", -1.0);
+  else
+    gen_emit("PUSHS int@-1");
+  gen_emit("MULS");
+}
+
 // print(x): hodnota je na zasobniku, vysledok je Unit
 static void gen_print(DataType arg_type) {
   gen_emit("POPS LF@%%t1");

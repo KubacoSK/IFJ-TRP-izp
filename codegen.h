@@ -9,6 +9,7 @@
 #ifndef _CODEGEN_H
 #define _CODEGEN_H
 
+#include "scanner.h"
 #include "symtable.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -57,6 +58,31 @@ void gen_push_string(const char *value);
 
 /** PUSHS hodnoty typu Unit (nil@nil). */
 void gen_push_unit(void);
+
+/**
+ * Definicia premennej LF@name$id do bufferu defs aktualnej funkcie.
+ * id je jedinecne cislo z tabulky symbolov (VarData.id), rozlisi zatienenie.
+ */
+void gen_defvar(const char *name, unsigned id);
+
+/** PUSHS LF@name$id */
+void gen_push_var(const char *name, unsigned id);
+
+/** POPS LF@name$id */
+void gen_pop_var(const char *name, unsigned id);
+
+/** Konverzia Int -> Double hodnoty na vrchu zasobnika (INT2FLOATS). */
+void gen_convert_top(void);
+
+/**
+ * Binarny operator nad dvoma hodnotami na zasobniku (lava je pod pravou).
+ * Podla typov prida konverziu Int -> Double, vyberie IDIVS/DIVS a pre
+ * String + String pouzije CONCAT. Vysledok ostane na zasobniku.
+ */
+void gen_binary(TokenType op, DataType left, DataType right);
+
+/** Unarne + / - nad hodnotou na vrchu zasobnika typu Int alebo Double. */
+void gen_unary(TokenType op, DataType type);
 
 /**
  * Volanie vstavanej funkcie. Argumenty su uz na zasobniku zlava doprava,

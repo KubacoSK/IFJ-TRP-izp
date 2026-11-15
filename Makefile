@@ -15,7 +15,7 @@ hashtable.o: hashtable.c hashtable.h utils.h
 symtable.o: symtable.c symtable.h hashtable.h utils.h
 	$(CC) $(CFLAGS) -c symtable.c -o symtable.o
 
-codegen.o: codegen.c codegen.h symtable.h hashtable.h error.h utils.h
+codegen.o: codegen.c codegen.h scanner.h symtable.h hashtable.h error.h utils.h
 	$(CC) $(CFLAGS) -c codegen.c -o codegen.o
 
 parser.o: parser.c parser.h scanner.h symtable.h codegen.h error.h
