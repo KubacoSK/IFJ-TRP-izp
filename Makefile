@@ -44,11 +44,15 @@ test_symtable: utils.o hashtable.o symtable.o tests/test_symtable.c
 
 test: test_scanner test_ht test_symtable
 
-check: test
-	
+# end-to-end testy prekladaca, potrebuju interpret ic26int (IC26INT=...)
+test_e2e: ifj26
+	bash tests/e2e.sh
+
+check: test test_e2e
+
 build-check: all check
 
 clean:
 	rm -f *.o ifj26 test_runner test_scanner_runner test_ht_runner test_symtable_runner
 
-.PHONY: all test test_scanner test_ht test_symtable check build-check clean
+.PHONY: all test test_scanner test_ht test_symtable test_e2e check build-check clean
