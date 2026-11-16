@@ -307,13 +307,163 @@ static void gen_print(DataType arg_type) {
   gen_push_unit();
 }
 
+// toStr(x): typ argumentu je znamy pri preklade
+static void gen_to_str(DataType arg_type) {
+  switch (arg_type) {
+  case TYPE_INT:
+    gen_emit("INT2STRS");
+    break;
+  case TYPE_DOUBLE:
+    gen_emit("FLOAT2STRS"); // format %.2f
+    break;
+  case TYPE_UNIT:
+    gen_drop();
+    gen_emit("PUSHS string@()");
+    break;
+  default:
+    break; // String ostava tak ako je
+  }
+}
+
+// strLength(s): STRLEN nema zasobnikovu verziu
+static void gen_str_length(void) {
+  gen_emit("POPS LF@%%t1");
+  gen_emit("STRLEN LF@%%t1 LF@%%t1");
+  gen_emit("PUSHS LF@%%t1");
+}
+
+// readLine(): READ vracia riadok vratane LF, po EOF prazdny retazec
+static void gen_read_line(void) {
+  gen_emit("READ LF@%%t1 string");
+  gen_emit("PUSHS LF@%%t1");
+}
+
+// vstavane funkcie generovane ako knizicne funkcie $b$meno
+static const char *const lib_names[] = {"readInt", "readDouble", "ord",
+                                        "subStr"};
+
 void gen_builtin_call(const char *name, const DataType *arg_types,
                       size_t arg_count) {
   if (strcmp(name, "print") == 0 && arg_count == 1) {
     gen_print(arg_types[0]);
+  } else if (strcmp(name, "toStr") == 0 && arg_count == 1) {
+    gen_to_str(arg_types[0]);
+  } else if (strcmp(name, "toInt") == 0) {
+    gen_emit("FLOAT2INTS"); // Int argument uz skonvertoval parser
+  } else if (strcmp(name, "chr") == 0) {
+    gen_emit("INT2CHARS"); // mimo 0-127 chyba 58 interpretu
+  } else if (strcmp(name, "strLength") == 0) {
+    gen_str_length();
+  } else if (strcmp(name, "readLine") == 0) {
+    gen_read_line();
+  } else {
+    for (size_t i = 0; i < sizeof(lib_names) / sizeof(lib_names[0]); i++) {
+      if (strcmp(name, lib_names[i]) == 0) {
+        gen_emit("CALL $b$%s", name);
+        return;
+      }
+    }
+    gen_error = true; // neznama vstavana funkcia, zasobnik by nesedel
   }
-  // ostatne vstavane funkcie doplni krok 6
 }
+
+// kniznica vstavanych funkcii, vypisuje sa vzdy cela (iba text, bez printf)
+static const char *const builtin_lib[] = {
+    // readInt(): pri EOF alebo chybnom vstupe 0
+    "\nLABEL $b$readInt\n"
+    "CREATEFRAME\n"
+    "PUSHFRAME\n"
+    "DEFVAR LF@%t1\n"
+    "DEFVAR LF@%t2\n"
+    "READ LF@%t1 int\n"
+    "JUMPIFNEQ $b$readInt$ok LF@%t1 nil@nil\n"
+    "MOVE LF@%t1 int@0\n"
+    "LABEL $b$readInt$ok\n"
+    "PUSHS LF@%t1\n"
+    "POPFRAME\n"
+    "RETURN\n",
+
+    // readDouble(): pri EOF alebo chybnom vstupe 0.0
+    "\nLABEL $b$readDouble\n"
+    "CREATEFRAME\n"
+    "PUSHFRAME\n"
+    "DEFVAR LF@%t1\n"
+    "DEFVAR LF@%t2\n"
+    "READ LF@%t1 float\n"
+    "JUMPIFNEQ $b$readDouble$ok LF@%t1 nil@nil\n"
+    "MOVE LF@%t1 float@0x0p+0\n"
+    "LABEL $b$readDouble$ok\n"
+    "PUSHS LF@%t1\n"
+    "POPFRAME\n"
+    "RETURN\n",
+
+    // ord(s, i): ASCII kod znaku, mimo rozsah (aj prazdny retazec) -1
+    "\nLABEL $b$ord\n"
+    "CREATEFRAME\n"
+    "PUSHFRAME\n"
+    "DEFVAR LF@%t1\n"
+    "DEFVAR LF@%t2\n"
+    "DEFVAR LF@s\n"
+    "DEFVAR LF@i\n"
+    "DEFVAR LF@len\n"
+    "DEFVAR LF@cond\n"
+    "POPS LF@i\n"
+    "POPS LF@s\n"
+    "STRLEN LF@len LF@s\n"
+    "LT LF@cond LF@i int@0\n"
+    "JUMPIFEQ $b$ord$bad LF@cond bool@true\n"
+    "LT LF@cond LF@i LF@len\n"
+    "JUMPIFEQ $b$ord$bad LF@cond bool@false\n"
+    "STRI2INT LF@%t1 LF@s LF@i\n"
+    "PUSHS LF@%t1\n"
+    "POPFRAME\n"
+    "RETURN\n"
+    "LABEL $b$ord$bad\n"
+    "PUSHS int@-1\n"
+    "POPFRAME\n"
+    "RETURN\n",
+
+    // subStr(s, start, end): podretazec [start, end), inak chyba 40
+    "\nLABEL $b$subStr\n"
+    "CREATEFRAME\n"
+    "PUSHFRAME\n"
+    "DEFVAR LF@%t1\n"
+    "DEFVAR LF@%t2\n"
+    "DEFVAR LF@s\n"
+    "DEFVAR LF@start\n"
+    "DEFVAR LF@end\n"
+    "DEFVAR LF@len\n"
+    "DEFVAR LF@res\n"
+    "DEFVAR LF@cond\n"
+    "POPS LF@end\n"
+    "POPS LF@start\n"
+    "POPS LF@s\n"
+    "STRLEN LF@len LF@s\n"
+    "LT LF@cond LF@start int@0\n"
+    "JUMPIFEQ $b$subStr$err LF@cond bool@true\n"
+    "LT LF@cond LF@end int@0\n"
+    "JUMPIFEQ $b$subStr$err LF@cond bool@true\n"
+    "GT LF@cond LF@start LF@end\n"
+    "JUMPIFEQ $b$subStr$err LF@cond bool@true\n"
+    "LT LF@cond LF@start LF@len\n"
+    "JUMPIFEQ $b$subStr$err LF@cond bool@false\n"
+    "GT LF@cond LF@end LF@len\n"
+    "JUMPIFEQ $b$subStr$err LF@cond bool@true\n"
+    "MOVE LF@res string@\n"
+    "LABEL $b$subStr$loop\n"
+    "LT LF@cond LF@start LF@end\n"
+    "JUMPIFEQ $b$subStr$done LF@cond bool@false\n"
+    "GETCHAR LF@%t1 LF@s LF@start\n"
+    "CONCAT LF@res LF@res LF@%t1\n"
+    "ADD LF@start LF@start int@1\n"
+    "JUMP $b$subStr$loop\n"
+    "LABEL $b$subStr$done\n"
+    "PUSHS LF@res\n"
+    "POPFRAME\n"
+    "RETURN\n"
+    "LABEL $b$subStr$err\n"
+    "EXIT int@40\n",
+};
 
 int gen_write(FILE *out) {
   if (gen_error || main_idx < 0)
@@ -340,6 +490,10 @@ int gen_write(FILE *out) {
     if (f->body.data)
       fputs(f->body.data, out);
   }
+
+  // kniznica vstavanych funkcii
+  for (size_t i = 0; i < sizeof(builtin_lib) / sizeof(builtin_lib[0]); i++)
+    fputs(builtin_lib[i], out);
   return ERROR_OK;
 }
 
