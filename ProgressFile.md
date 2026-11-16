@@ -1,6 +1,6 @@
 # Progress projektu IFJ a IAL (variant TRP-izp)
 
-Posledná aktualizácia: 14. 11. 2026
+Posledná aktualizácia: 16. 11. 2026 (vetva `Code-generator`, commit `c5f9430`)
 
 ## Legenda
 
@@ -10,275 +10,221 @@ Posledná aktualizácia: 14. 11. 2026
 
 ## Aktuálny stav
 
-- Základné C moduly existujú: scanner, parser (syntax + sémantika v jednom
-  module), hash tabuľka, tabuľka symbolov, pomocné funkcie, chybové kódy a `main`.
-- Build bol overený v Linux prostredí (WSL Ubuntu, gcc 13.3) s
-  `-Wall -Wextra -pedantic -std=c99`, bez warningov.
+- Prekladač je funkčný celok: scanner → parser (syntax + sémantika) →
+  generátor IFJcode26 priamo z parsera → výpis až po úspešnej analýze.
+- Build v WSL Ubuntu (gcc 13.3) s `-Wall -Wextra -pedantic -std=c99` je bez
+  warningov.
 - Unit testy prechádzajú: scanner 56/56, hash tabuľka 26/26, tabuľka
-  symbolov 19/19 (`make test`).
-- Parser je dvojpriechodový: 1. priechod zbiera hlavičky funkcií, 2. priechod
-  analyzuje telá. Všetkých 10 nálezov z `REVIEW_FINDINGS.md` je opravených
-  (finding 4 v commite `d03b5ee`), vetva je zlúčená do `main` (PR #3).
-- Formátovanie: v `main` je `.clang-format` s čistým štýlom LLVM. Všetky
-  zdrojové súbory sú preformátované a zmeny sú zlúčené do `main`; build bez
-  warningov a unit testy prechádzajú rovnako ako predtým.
-- Parser bol ručne otestovaný sadou ~90 malých IFJ26 programov s očakávanými
-  návratovými kódmi a cez `valgrind`; sada zatiaľ nie je v repozitári.
-- Generovanie IFJcode26 zatiaľ nie je implementované (vetva `CodeGenerator`
-  neobsahuje generátor).
-- **Pokusné odovzdanie je 19. 11. 2026** – bez generátora kódu prejdú iba
-  testy chybových návratových kódov.
-- Projekt bol porovnaný s demo cvičeniami (časť 1 a 2), slidmi prednášok a
-  špecifikáciou; podrobnosti sú v `Democvika feedback.md`. Najväčšie riziko je
-  precedenčná analýza (časť 4), generátor má pred písaním niekoľko
-  rozhodnutí (časť 6).
+  symbolov 27/27 (`make test`).
+- End-to-end testy prechádzajú: 184/184 (`make test_e2e`, `tests/e2e.sh`,
+  preklad → `ic26int` → porovnanie výstupu a návratových kódov).
+- `valgrind` je čistý na úspešnom preklade aj na chybových cestách (kódy 1, 3,
+  4, 5, chyba počas analýzy na požiadanie, chyba vo vnorenom výraze).
+- Pri chybe prekladu je `stdout` prázdny; kód nepoužíva súbory, sieť ani
+  podprocesy, iba štandardnú knižnicu C.
+- Rozšírenie FUNEXP je implementované, ale chýba súbor `rozsireni`, takže by
+  sa netestovalo.
+- **Pokusné odovzdanie je 19. 11. 2026.** Pred ním treba hlavne: `rozsireni`,
+  `rozdeleni`, oprava `readInt` mimo rozsahu Int, hlavičky súborov,
+  `clang-format` (pozri „Zoznam úloh“).
 
 ## 1. Príprava a architektúra
 
 - [x] Vytvorenie / nastavenie spoločného Git repozitára.
 - [x] Dohodnutie pravidiel práce: Conventional Commits, pull requesty a code review.
-- [x] Vytvorenie základného `Makefile` s cieľmi `all`, `ifj26`, `test`,
-  `test_scanner`, `test_ht`, `test_symtable` a `clean`.
-- [x] Doplniť samostatné ciele `check` alebo `build-check`.
-- [x] Nastaviť a overiť `clang-format` pre všetky zdrojové súbory (zadanie 2.5
-  to vyžaduje povinne): `.clang-format` (LLVM bez úprav), kód je preformátovaný
-  a zlúčený do `main` (PR #4). Odvtedy musí každý formátovať pred commitom
-  (VS Code: Shift+Alt+F alebo Format On Save).
-- [x] Architektúra bez AST: parser riadi preklad a generátor bude vypisovať kód
-  priamo pri rozpoznaní konštrukcie. Zodpovedá prístupu 3 z prednášky 9
-  („Direct Generation of 3AC“). Na obhajobu pripraviť zdôvodnenie (bez AST,
-  dva priechody); demo cvičenie odporúča skôr AST, ale priamy prístup je povolený.
-- [x] Navrhnutie základných dátových štruktúr tokenov v `scanner.h`.
-- [x] Navrhnutie dátových štruktúr hash tabuľky a tabuľky symbolov.
-- [~] Základná modulárna architektúra existuje, treba ju ešte prepojiť s
-  kompletným tokom parser -> sémantika -> generovanie kódu.
+- [x] `Makefile` s cieľmi `all` (predvolený, `ifj26`), `test`, `test_scanner`,
+  `test_ht`, `test_symtable`, `test_e2e`, `check`, `build-check`, `clean`.
+- [~] `clang-format` (LLVM, `.clang-format`): `parser.c` má 41 odchýlok,
+  `codegen.c` 5, `main.c` 1, `symtable.h` 2 (`clang-format --dry-run`).
+  Ostatné súbory sú v poriadku. Treba spustiť `clang-format -i`.
+- [x] Architektúra bez AST: parser riadi preklad a generátor vypisuje kód
+  priamo pri rozpoznaní konštrukcie (prednáška 9, prístup 3). Na obhajobu
+  pripraviť zdôvodnenie (bez AST, dva priechody).
+- [x] Dátové štruktúry tokenov, hash tabuľky a tabuľky symbolov.
+- [x] Celý tok parser → sémantika → generovanie kódu je prepojený.
 - [x] Bez `tmpfile()`: 1. priechod načíta všetky tokeny do poľa v pamäti
   (lexikálna chyba ako zarážka, vráti sa až keď k nej parser dôjde),
-  2. priechod ide po tom istom poli. Scanner sa číta zo stdin iba raz.
-- [~] Jednotné vlastníctvo pamäte: parametre funkcií majú `free_params`,
-  `parse_params` uvoľňuje pri chybe; pri chybe sa ešte neuvoľní `current_tok`
-  a symbolová tabuľka v niektorých vetvách.
+  2. priechod ide po tom istom poli. Scanner číta stdin iba raz.
+- [x] Uvoľnenie pamäte aj pri chybe (pole tokenov, symbolová tabuľka, buffery
+  generátora), overené `valgrind`.
 - [ ] Hlavičky zdrojových súborov neobsahujú mená a loginy autorov
-  (zadanie 2.5 to vyžaduje). Demo cvičenie: hlavička s autorom a popisom má
-  byť v každom súbore a všade rovnaká.
+  (zadanie 2.5), chýba vo všetkých 14 súboroch `.c/.h`.
 
 ## 2. Hash tabuľka a tabuľka symbolov (IAL)
 
 ### Hash tabuľka
 
-- [x] Zvolená hashovacia funkcia djb2.
-- [x] Implementovaná otvorená adresácia s lineárnym prehľadávaním.
-- [x] Implementované stavy `EMPTY`, `OCCUPIED` a `DELETED`.
-- [x] Implementované `ht_init`, `ht_insert`, `ht_search`, `ht_delete` a
-  `ht_clear`.
-- [x] Ošetrené kolízie, aktualizácia duplicitného kľúča a hrobčeky.
-- [x] Napísané unit testy pre inicializáciu, vkladanie, vyhľadávanie,
-  kolízie, mazanie a čistenie tabuľky (26/26 prechádza).
-- [ ] Overiť správanie pri zaplnenej tabuľke a pri zlyhaní alokácie.
+- [x] Hashovacia funkcia djb2, otvorená adresácia s lineárnym prehľadávaním,
+  stavy `EMPTY`, `OCCUPIED`, `DELETED`.
+- [x] `ht_init`, `ht_insert`, `ht_search`, `ht_delete`, `ht_clear`.
+- [x] Unit testy (26/26).
+- [ ] Pevná kapacita `HT_CAPACITY 2039` bez zväčšovania: viac ako 2039
+  premenných v jednom bloku alebo viac ako ~2029 funkcií vráti 99, hoci 99 má
+  byť iba chyba neovplyvnená vstupom. Rozhodnúť v tíme (zväčšovanie tabuľky).
 
 ### Tabuľka symbolov
 
-- [x] Navrhnuté typy `DataType`, `SymbolKind`, `Param`, `VarData` a `FuncData`.
-- [x] Implementovaná globálna tabuľka funkcií.
-- [x] Implementované lokálne scopes s rodičovským scope.
-- [x] Implementované pridávanie a vyhľadávanie premenných a funkcií.
-- [x] Implementované zatienenie premenných vo vnorenom scope.
-- [x] Implementované uvoľnenie symbolov, parametrov a scope-ov.
-- [x] Napísané unit testy pre funkcie, premenné, scopes a zatienenie (19/19).
-- [x] Redefinícia v rovnakom scope: rieši parser cez
-  `symtable_find_var_current_scope` pred vložením (chyba 4).
-- [x] Vstavané funkcie (`print`, `readLine`, `readInt`, `readDouble`, `toStr`,
-  `toInt`, `strLength`, `subStr`, `ord`, `chr`) sú vložené do tabuľky.
-- [ ] Doplniť testy pre chybové stavy a zlyhanie alokácie.
+- [x] Typy `DataType`, `SymbolKind`, `Param`, `VarData` (s jedinečným `id`),
+  `FuncData`.
+- [x] Globálna tabuľka funkcií, lokálne scopes s rodičom, zatienenie.
+- [x] Jedinečné ID premennej z počítadla (`next_var_id`) pre premenovanie
+  `LF@meno$ID`.
+- [x] Vstavané funkcie vložené do tabuľky.
+- [x] Unit testy (27/27) vrátane jedinečných ID.
+- [ ] Návratové hodnoty pri zlyhaní alokácie sa nekontrolujú všade:
+  `symtable_add_builtins` v `main.c`, `symtable_push_scope` v `parser.c`,
+  `str_dup` mena parametra v `symtable_add_func`.
+- [ ] Parser pri analýze na požiadanie priamo mení `symtab->current_scope`
+  (Symtable nie je úplne skrytý ADT); zvážiť funkciu na odpojenie/obnovenie
+  rozsahov v `symtable`.
 
 ## 3. Lexikálna analýza / scanner
 
 - [ ] Dokončiť a archivovať stavový diagram scanneru.
-- [x] Čítanie zo `stdin` aj z nastaveného `FILE *`.
-- [x] Reset vnútorného stavu scanneru.
-- [x] Tokenizácia identifikátorov, kľúčových slov a samostatného `_`.
-- [x] Tokenizácia celočíselných a desatinných literálov vrátane exponentov,
-  oddeľovačov `_` a sufixu `d/D`.
-- [x] Tokenizácia jedno- a viacriadkových reťazcov s escape sekvenciami.
-- [x] Tokenizácia operátorov, porovnania, priradenia a interpunkcie.
-- [x] Podpora anotácie `@main`.
-- [x] Spracovanie komentárov vrátane vnorených blokových komentárov.
-- [x] Spracovanie odsadenia cez tokeny `INDENT` a `DEDENT`.
-- [x] Lookahead cez `unget_token` (využíva ho parser pri príkaze s identifikátorom).
-- [x] Príznak `had_preceding_newline` sa nastavuje (potrebné pre koncovú čiarku).
-- [x] Detekcia lexikálnych chýb a interných chýb alokácie.
-- [x] Unit testy scanneru pokrývajúce základné tokeny a chybové vstupy (56/56).
-- [x] Spustiť testy na Linux prostredí (WSL Ubuntu).
+- [x] Identifikátory, kľúčové slová, `_`, celé a desatinné literály
+  (exponent, `_`, sufix `d/D`), jedno- a viacriadkové reťazce s escape
+  sekvenciami, operátory, `@main`, vnorené komentáre, `INDENT` / `DEDENT`,
+  `had_preceding_newline`.
+- [x] Unit testy scanneru (56/56).
+- [ ] Desatinný literál mimo rozsahu Double (`1e999`) prejde a vygeneruje
+  `float@inf` → interpret skončí 51; má byť lexikálna chyba 1 (kontrola
+  `ERANGE` / `HUGE_VAL` po `strtod`).
+- [ ] Odsadenie hlbšie ako 127 úrovní vráti 99 (`MAX_INDENT_LEVELS`);
+  zásobník odsadenia zmeniť na dynamický.
+- [ ] Skutočný tabulátor v jednoriadkovom reťazci a `"""a""""` vrátia 1,
+  Scala ich prijme (nízka priorita).
+- [ ] Kľúčové slová rozšírení (`Boolean`, `case`, `for`, …) sa berú ako
+  identifikátory (netestuje sa); `val a: Boolean` vráti 3.
 - [ ] Overiť na serveri Merlin (gcc 14+/clang).
-- [ ] Doplniť regresné testy pre hraničné prípady čísel, komentárov,
-  odsadenia, konca súboru a `had_preceding_newline`.
 
 ## 4. Syntaktická analýza / parser (Dominik)
 
-- [x] Rekurzívny zostup, dvojpriechodový (hlavičky -> telá).
-- [x] Povinný prolog `import ifj26.*`, iba definície funkcií na najvyššej úrovni.
-- [x] Anotácia `@main` na rovnakom aj samostatnom riadku (oba priechody).
-- [x] Parametre a návratové typy funkcií, ľubovoľný počet parametrov
-  (dynamické pole namiesto `Param[20]`).
-- [x] Koncová čiarka v parametroch a argumentoch iba pred novým riadkom.
+- [x] Rekurzívny zostup, dvojpriechodový (hlavičky → telá).
+- [x] Prolog `import ifj26.*` (aj s bielymi znakmi medzi tokenmi), iba
+  definície funkcií na najvyššej úrovni, `@main` na rovnakom aj samostatnom
+  riadku.
+- [x] Parametre, návratové typy, koncová čiarka iba pred novým riadkom.
 - [x] Bloky cez `INDENT` / `DEDENT`, prázdny blok je chyba 2.
-- [x] `val` / `var`, priradenie, volanie funkcie ako príkaz.
-- [x] Samostatný výraz ako príkaz vrátane výrazu začínajúceho identifikátorom.
-- [x] Stredník ako oddeľovač príkazov na jednom logickom riadku.
-- [x] `if ... then ... else` (else povinné), `while ... do`, `return [výraz]`.
-- [x] Precedenčná analýza výrazov s `+ - * /`, relačnými operátormi a zátvorkami.
-- [x] Precedenčná tabuľka navrhnutá ručne podľa prednášky 8 (priorita,
-  asociativita, zátvorky, `$`); hodnoty sú správne.
-- [ ] **RIZIKO – overiť u cvičiaceho / na fóre:** slučka `parse_expression_inner`
-  sa líši od algoritmu z prednášky 8. Slidy: jeden zásobník s terminálmi, `E` a
-  značkami `<`, identifikátor `i` v tabuľke, redukcia hľadá pravidlo `A → y`.
-  Kód: dva zásobníky (operátory a typy), bez `<`, bez `i` v tabuľke, redukcia
-  vyberie operátor a dva operandy. Zadanie žiada analýzu „odpovídající výkladu
-  v přednáškách“ a autor zadania na democviku varoval pred Shunting Yard.
-  Ak treba zmeniť: tabuľka ostane, pribudne riadok/stĺpec `i` a slučka sa
-  prepíše na jeden zásobník (formalizmy navrhnúť ručne, nie cez AI).
-  Fórum („FUNEXP – Kombinácia LL a precedenčnej analýzy“, 13. 11.): iný tím
-  spracúva volania funkcií mimo tabuľky a výsledok berie ako jeden `i`;
-  Ondryáš: „pokud vám to funguje správně, není problém“, treba mať dobrú
-  odpoveď na „Proč zrovna takhle?“. Riziko je tým menšie (náš `parse_term`
-  funguje podobne), ale otázka dvoch zásobníkov bez značiek `<` tam nezaznela
-  → stále sa krátko opýtať cvičiaceho a pripraviť zdôvodnenie na obhajobu.
-- [x] Unárne `+`/`-` vrátane `-( ... )`.
-- [x] Vnorené zátvorky vo výrazoch (`((x))`, `1 + (2 * (3))`); prázdne `()`
-  sa rozpozná podľa `expect_opd`.
-- [x] Precedenčná analýza kontroluje poradie operand/operátor
-  (`1 2 +`, `1 + * 2`, `x *` sú chyba 2).
-- [x] Zásobníky v `parse_expression` sú dynamické (`realloc`), hlboké výrazy
-  (5000 zátvoriek) prejdú bez pretečenia, overené ASan aj valgrind.
-- [x] Logický riadok nesmie začínať operátorom (`-x` na začiatku riadku je
-  chyba 2, za `;` na tom istom riadku je povolené).
-- [x] Neznámy názov typu (`val a: Foo`, `a: Foo`, `): Foo`) je chyba 3
-  (spoločná funkcia `parse_type`).
-- [ ] Scanner neberie `Boolean`, `case`, `class`, `extension`, `for`, `List`,
-  `match`, `type` ako kľúčové slová (špecifikácia: v základe je vhodné ich
-  neprijímať ako identifikátor, netestuje sa). `val a: Boolean` dnes vráti 3.
-- [~] Volanie funkcie vo výraze (`1 + f(x)`) a výraz/volanie v argumentoch sú
-  prijímané – v základnom zadaní je to chyba, platné iba s rozšírením FUNEXP.
-  Demo cvičenie FUNEXP silno odporúča (hlavne úpravy precedenčnej analýzy,
-  zároveň rieši nejednoznačnosť priradenia), polovicu už máme → dokončiť
-  a zapísať do `rozsireni`.
-- [ ] Navrhnúť a zdokumentovať kompletnú LL gramatiku a LL tabuľku.
-- [~] Vytvoriť samostatné syntaktické testy s očakávanými návratovými kódmi
-  (existujú lokálne, treba ich pridať do `tests/` a skriptu).
+- [x] `val` / `var`, priradenie, volanie ako príkaz, samostatný výraz,
+  stredník, `if … then … else`, `while … do`, `return [výraz]`.
+- [x] Precedenčná analýza podľa prednášky 8: jeden zásobník s terminálmi,
+  `E` a značkami `<`, `i` v tabuľke, redukcia hľadá pravidlo
+  (`E → i`, `E → u E`, `E → ( E )`, `E → ( )`, `E → E op E`).
+- [x] Unárne `+` / `-`, zátvorky, `()` ako literál `Unit`.
+- [x] Logický riadok nesmie začínať operátorom (za `;` je povolené).
+- [x] FUNEXP: volania vo výrazoch a výrazy v argumentoch, vnorené volania,
+  vyhodnocovanie zľava doprava.
+- [x] Hlboké výrazy: 100 000 vnorených zátvoriek aj výraz s 200 000 členmi
+  prejdú.
+- [ ] Hlboko vnorené volania `f(f(…))` (~50 000 úrovní) spadnú na
+  segfault (rekurzia); 20 000 prejde. Obmedziť hĺbku.
+- [ ] `1 < 2 == 3 < 4` vráti 2 (v tabuľke `E` medzi úrovňami 4 a 5),
+  podľa priorít by mohla byť skôr 6 → fórum.
+- [ ] Navrhnúť a zdokumentovať LL gramatiku a LL tabuľku.
 
 ## 5. Sémantická analýza (Dominik)
 
-- [x] Prepojenie parsera s tabuľkou symbolov pre funkcie, parametre a premenné.
-- [x] Nedefinovaná premenná/funkcia (3), redefinícia premennej/funkcie (4).
-- [x] Duplicitné mená parametrov (4).
-- [x] Inicializácia je povinná syntakticky, čítanie neinicializovanej premennej
-  nemôže nastať.
-- [x] Typová kontrola výrazov, inicializácie a priradení vrátane `Int -> Double`.
+- [x] Nedefinovaná premenná/funkcia/typ (3), redefinícia premennej/funkcie,
+  duplicitné parametre (4).
+- [x] Typová kontrola výrazov, inicializácie, priradení, argumentov a návratu
+  vrátane `Int → Double`.
 - [x] Zápis do `val` a do parametra (7).
-- [x] Počet a typy argumentov pri volaní vstavaných aj užívateľských funkcií (5).
-- [x] `@main`: chýbajúci (3), viacnásobný (4), s parametrami (5),
-  iný návratový typ ako `Unit` (6).
-- [x] Boolean iba v podmienke `if` / `while` (inde chyba 6).
-- [x] Explicitný `Unit`: hodnota `return` a jednoriadkového tela sa zahodí.
-- [x] `return` vo funkcii bez explicitného návratového typu (6).
-- [x] **Finding 4:** odvodený návratový typ sa ukladá do symtable; funkcia bez
-  typu volaná pred definíciou sa analyzuje na požiadanie (skok v poli tokenov,
-  bez prístupu k lokálnym premenným volajúceho, potom sa v poradí preskočí).
-- [x] Rekurzia bez typu v hlavičke (6): priama/vzájomná počas analýzy (stav
-  „prebieha“), nepriama cez funkciu s typom cez graf volaní (DFS na konci).
-- [ ] Parser pri analýze na požiadanie priamo mení `symtab->current_scope`
-  (Symtable nie je skrytý ADT). Na obhajobu by bolo čistejšie pridať do
-  `symtable` funkciu na odpojenie/obnovenie rozsahov – rozhodnúť v tíme
-  (pozor: AI sa pri implementácii vyhľadávacej štruktúry nesmie použiť).
-- [x] Výsledok bloku (`StmtResult`): posledný príkaz určuje výsledok tela,
-  definícia/priradenie/`while` = `Unit`; kontroluje sa aj nedosiahnuteľný kód.
-- [x] Pravidlá pre `if` na konci tela funkcie (explicitný `Unit` / všetky vetvy
-  `return` / bez typu a všetky vetvy `Unit`), rekurzívne pre vnorený `if`.
-- [x] `@main` bez typu musí mať výsledok tela `Unit`.
-- [ ] Porovnanie `==` / `!=` dvoch hodnôt `Unit` vracia 6, špecifikácia
-  povoľuje porovnanie hodnôt rovnakého typu. Fórum („Unit ve formě ()“):
-  `()` je literál typu `Unit` ako celočíselné literály, smie byť všade, kde sa
-  čaká term alebo výraz – `() == ()` by teda malo prejsť.
-- [x] Literál `()` podľa fóra overený 14. 11.: `(((())))`, `print(())`,
-  `f(())`, `return ()`, `val a: Unit = ()` prechádzajú, `() + 42` vracia 6.
-  Biele znaky medzi `(` a `)` sa testovať nebudú.
-- [ ] Overiť na fóre: chyba 6 vs. 10 pre nepovolený `return` (samostatný
-  `return` mimo `Unit`, `return` vo funkcii bez typu).
-- [ ] Overiť na fóre: zreťazenie relačných operátorov (`1 < 2 < 3`) teraz
-  vracia 6, môže sa očakávať 2.
-- [ ] Overiť: `val x` v tele funkcie s parametrom `x` vracia 4 (parametre sú
-  v rovnakom scope ako telo), Scala to povoľuje.
-- [ ] Poradie chýb medzi priechodmi: 1. priechod hlási chyby hlavičiek skôr, než
-  2. priechod skontroluje prolog (napr. chýbajúci prolog + duplicitná funkcia
-  vráti 4 namiesto 2).
-- [~] Testy sémantických chybových kódov `3`, `4`, `5`, `6`, `7` existujú
-  lokálne; kód `10` zatiaľ nikde nevzniká.
+- [x] Počet a typy argumentov vstavaných aj užívateľských funkcií (5).
+- [x] `@main`: chýbajúci (3), viacnásobný (4), s parametrami (5), iný
+  návratový typ ako `Unit` (6).
+- [x] Boolean iba v podmienke `if` / `while` (inde 6).
+- [x] Explicitný `Unit`: hodnota `return` a tela sa zahodí.
+- [x] `return` vo funkcii bez explicitného typu (6).
+- [x] Odvodený návratový typ, analýza na požiadanie pri volaní pred
+  definíciou, rekurzia bez typu (6) cez stav „prebieha“ a graf volaní.
+- [x] Pravidlá pre `if` na konci tela funkcie, rekurzívne pre vnorený `if`.
+- [x] `() == ()` a `() != ()` prechádzajú.
+- [x] Zreťazenie `1 < 2 < 3` vráti 2.
+- [ ] Poradie chýb: 1. priechod nájde lexikálnu chybu a duplicitnú funkciu
+  skôr než 2. priechod (syntaktická chyba pred neukončeným reťazcom vráti 1;
+  chýbajúci prolog + duplicitná funkcia vráti 4 namiesto 2).
+- [ ] Kód 10 nikde nevzniká; samostatný `return` vo funkcii s typom iným ako
+  `Unit` vráti 6 → fórum (6 podľa kap. 2.3 vs. 10 podľa kap. 6).
+- [ ] Boolean ako argument (`print(1 < 2)`, `f(1 < 2)`) vráti 6, môže sa
+  čakať 5 → fórum.
+- [ ] `val x` v tele funkcie s parametrom `x` vráti 4 (parametre sú v rovnakom
+  scope ako telo), Scala to povoľuje → fórum.
 
 ## 6. Generovanie cieľového kódu IFJcode26 (Jakub)
 
-Rozhodnutia pred písaním (demo cvičenie 2, overené v špecifikácii):
+Rozhodnutia (implementované):
 
-- [ ] Rozsahy platnosti: jeden lokálny rámec na funkciu, premenné premenovať
-  podľa rozsahu (`x$1`, `x$2`). Číslo rozsahu musí byť jedinečné z počítadla,
-  nie hĺbka zanorenia → doplniť ID do `Scope` v `symtable.h`.
-- [ ] Všetky `DEFVAR` presunúť na začiatok funkcie (`DEFVAR` v cykle = chyba 52
-  pri druhom prechode) → dva buffery na funkciu: `DEFVAR`-y a telo.
-- [ ] Výstup bufferovať po funkciách a vypísať až na konci bez chyby (telo sa
-  môže generovať prerušovane pri analýze na požiadanie).
-- [ ] Volacia konvencia: argumenty aj návratová hodnota na dátovom zásobníku
-  (odporúčané, hlavne s FUNEXP). Nevracať hodnotu v `TF` – `POPFRAME` ju prepíše.
-- [ ] Výrazy zásobníkovými inštrukciami (`PUSHS`, `ADDS`, …) pri redukcii
-  v precedenčnej analýze; pozor na `Int → Double` pri ľavom operande.
-- [ ] Jedinečné návestia z počítadla (napr. `fun$while$3$end`).
-- [ ] `Unit` ako `nil@nil`, ale `print(())` musí vypísať `()` (nie `nil`).
-- [ ] `Double` literály cez `printf("%a")`; `print` = `WRITE` (`%a`),
-  `toStr` pre `Double` = `FLOAT2STR` (`%.2f`).
+- [x] Priame generovanie z parsera, zásobníkové inštrukcie.
+- [x] Argumenty aj návratová hodnota cez dátový zásobník, rámec vytvára volaná
+  funkcia (`CREATEFRAME`, `PUSHFRAME` v prológu).
+- [x] Premenné `LF@meno$ID`, všetky `DEFVAR` na začiatku funkcie (buffer
+  `defs`), žiadna chyba 52 pri premenných v cykloch.
+- [x] Pomocné premenné lokálne `LF@%t1`, `LF@%t2`.
+- [x] Vstupný bod `CALL $f$<main>`, `CLEARS`, `EXIT int@0`; výpis až na konci.
+- [x] Každý príkaz nechá na zásobníku 1 hodnotu, pred ďalším sa zahodí.
+- [x] `Unit` = `nil@nil`, `print(())` vypíše `()`.
+- [x] Statická konverzia `Int → Double`, `<=` / `>=` ako `(a < b) OR (a == b)`,
+  `Int / Int` cez `IDIVS`, `+` reťazcov cez `CONCAT`.
+- [x] Literály `int@`, `float@%a`, `string@` s escape `\xyz`.
+- [x] Vstavané funkcie: inline `print`, `toStr`, `toInt`, `chr`, `strLength`,
+  `readLine`; knižnica `$b$` `readInt`, `readDouble`, `ord`, `subStr`
+  (chyba 40 vo všetkých 5 prípadoch).
+- [x] Otestované cez `ic26int` (e2e), kód iba na `stdout`.
 
-Implementácia:
+Otvorené:
 
-- [ ] Navrhnúť rozhranie a dátové štruktúry generátora.
-- [ ] Implementovať výpis hlavičky a základných inštrukcií IFJcode26.
-- [ ] Implementovať tvorbu a rušenie rámcov.
-- [ ] Implementovať prácu s premennými, parametrami a dočasnými hodnotami.
-- [ ] Implementovať generovanie výrazov a konverzií typov.
-- [ ] Implementovať generovanie volaní funkcií a návratových hodnôt.
-- [ ] Implementovať generovanie `if` / `else` a `while` cez návestia a skoky.
-- [ ] Implementovať požadované vstavané funkcie (vrátane chyby 40 pri `subStr`).
-- [ ] Otestovať výstup cez referenčný interpret IFJcode26.
-- [ ] Overiť, že diagnostika ide na `stderr` a generovaný kód na `stdout`.
+- [ ] `readInt` pre hodnotu mimo rozsahu Int (`3000000000`, `2147483648`)
+  vráti túto hodnotu namiesto 0 (kap. 4). Opraviť `$b$readInt` a test
+  `readint_pretecenie` v `tests/e2e.sh` (dnes očakáva nesprávny výstup).
+- [ ] `readLine` pri EOF: Windows `ic26int` vráti `""`, ale podľa kap. 7.4.4
+  `READ` vráti `nil`. Pridať kontrolu `nil` (napr. presunúť do `$b$readLine`).
+- [ ] Pretečenie Int nemá 32-bitovú sémantiku Scaly (`2147483647 + 1` →
+  `2147483648`, `toInt(1e20)` → 64-bitová hodnota) → najprv fórum.
+- [ ] Aktualizovať `Generator postup.md`: R10/R12 uvádzajú `GF@%t1` a
+  `POPS GF@%t1`, R16 `<=` ako `GTS NOTS`; kód používa `LF@%t1`, `CLEARS`
+  a `OR`.
 
 ## 7. Testovanie, kvalita a ladenie
 
-- [x] Existujú unit testy hash tabuľky, tabuľky symbolov a scanneru.
-- [ ] Doplniť end-to-end testovací skript pre preklad a návratové kódy.
-- [ ] Pridať validné vstupy s očakávaným výstupom.
-- [~] Lexikálne, syntaktické a sémantické chybové vstupy existujú lokálne,
-  treba ich pridať do `tests/`.
-- [ ] Pridať testy generovaného IFJcode26.
-- [~] Build overený cez gcc 13 (WSL); treba ešte gcc 14+/clang 19+ (Merlin).
-- [ ] Overiť kompatibilitu s požiadavkami servera Merlin.
-- [~] Parser skontrolovaný cez `valgrind` na testovacích vstupoch – bez únikov
-  a neplatných prístupov; overflow pri hlbokých zátvorkách (ASan) je opravený.
-- [ ] Pridať testy hraničných prípadov a regresné testy po každej väčšej zmene.
-- [x] Warning-free build s `-Wall -Wextra -pedantic -std=c99`.
-- [x] Pomenovanie je jednotné: funkcie a premenné `slovo_slovo`, typy
-  `PascalCase`, konštanty a makrá `VELKE_PISMENA`.
-- [ ] Drobné výnimky v pomenovaní: `Token_type` (nepoužitý alias) a
-  `Token_attribute` v `scanner.h`, lokálne `p_toStr`, `p_toInt`,
-  `p_strLength`, `p_subStr` v `symtable.c`, makro `current_tok` v `parser.c`.
+- [x] Unit testy hash tabuľky, tabuľky symbolov a scanneru (109).
+- [x] End-to-end skript `tests/e2e.sh` (184 testov): parser, precedenčná
+  analýza, literály, výrazy, riadenie toku, funkcie, vstavané funkcie,
+  príklady zo špecifikácie.
+- [ ] Doplniť e2e testy chybových kódov, ktoré chýbajú alebo sú slabo pokryté:
+  - 1: neukončený reťazec, tabulátor v odsadení, neukončený komentár,
+    neplatný escape, `1e999` (dnes 0 e2e testov);
+  - 2: chýbajúci a dvojitý prolog;
+  - 3: chýbajúci `@main`;
+  - 4: redefinícia premennej, funkcie, parametra, dva `@main` (dnes 0 testov);
+  - 5 a 6: `@main` s parametrom, `@main` s typom `Int`;
+  - 6: rekurzia bez typu, telo s typom končiace `if` bez `return`;
+  - 7: zápis do parametra;
+  - `readInt` so vstupom `2147483648` → `0`;
+  - 100 úrovní vnorenia → preklad bez chyby.
+- [x] Warning-free build, `valgrind` čistý.
+- [~] Build overený cez gcc 13 (WSL); treba gcc 14+/clang 19+ (Merlin).
+- [ ] Drobné výnimky v pomenovaní: `Token_type`, `Token_attribute`
+  v `scanner.h`, `p_toStr`, `p_toInt`, `p_strLength`, `p_subStr`
+  v `symtable.c`, makro `current_tok` v `parser.c`.
+
+### Overiť na Merline / Linux `ic26int`
+
+- [ ] `READ string` pri EOF (`nil` alebo `""`).
+- [ ] Literály `int@` mimo 32 bitov (`-2147483648` vo Windows verzii vypíše
+  `-2147483647`).
+- [ ] `READ int` so vstupmi `+5`, ` 5`, `3000000000`.
+- [ ] `float@` s `-0x0p+0` a subnormálnymi číslami, výpis `\n` ako LF.
+- [ ] Návratové kódy 40, 57, 58; čas behu pri veľkých vstupoch.
 
 ## 8. Dokumentácia a odovzdanie
 
-- [~] Zdrojové súbory obsahujú základné komentáre k verejným rozhraniam.
-  Demo cvičenie: dokumentácia funkcií má byť v `.h` (ideálne Doxygen),
-  vo vnútri funkcií stručné komentáre – prejsť všetky `.h`.
+- [~] Zdrojové súbory obsahujú komentáre k funkciám; dokumentácia rozhraní
+  v `.h` (ideálne Doxygen) – prejsť všetky `.h`.
 - [ ] Pripraviť odpovede na obhajobu: prečo bez AST, prečo dva priechody,
-  prečo scanner s vnorenými komentármi nie je čistý konečný automat, prečo
-  scanner nepracuje s tabuľkou symbolov (prednáška 5 to pripúšťa), parametre
-  hash tabuľky (djb2, 2039 slotov, lineárny krok), tvar precedenčnej analýzy.
-- [ ] Priebežne zapisovať použitie AI podľa požiadaviek predmetu.
+  scanner s vnorenými komentármi, parametre hash tabuľky (djb2, 2039 slotov,
+  lineárny krok), tvar precedenčnej analýzy, volacia konvencia a zásobník.
 - [ ] Vytvoriť súbor `rozdeleni` (LF konce riadkov, súčet 100 %).
-- [ ] Vytvoriť súbor `rozsireni` (identifikátory rozšírení, LF konce riadkov).
+- [ ] Vytvoriť súbor `rozsireni` s riadkom `FUNEXP` (LF koniec riadku).
 - [ ] Dokončiť `dokumentace.pdf`:
   - [ ] Úvodná strana, členovia tímu, varianta, rozdelenie bodov, rozšírenia,
     odkaz na repozitár.
@@ -286,64 +232,48 @@ Implementácia:
   - [ ] Diagram konečného automatu scanneru.
   - [ ] LL gramatika/tabuľka a precedenčná tabuľka.
   - [ ] Popis tabuľky symbolov a generovania kódu.
-  - [ ] Zhodnotenie použitia AI a rozdelenia práce.
-  - [ ] Uviesť štýl formátovania kódu (`clang-format`, LLVM).
-- [ ] Doplniť a aktualizovať `README.md` o build, testy a použitie prekladača.
-- [ ] Spustiť `is_it_ok.sh` nad finálnym archívom.
-- [ ] Skontrolovať obsah archívu a odstrániť objektové, dočasné a testovacie súbory.
+  - [ ] Rozdelenie práce, spolupráca, testovanie.
+  - [ ] Štýl formátovania kódu (`clang-format`, LLVM).
+- [ ] Doplniť `README.md` o build, testy a použitie prekladača.
+- [ ] Archív vytvoriť z gitu (pracovná kópia na Windows má CRLF), spustiť
+  `is_it_ok.sh`, odstrániť objektové a dočasné súbory.
 - [ ] **POKUSNÉ ODOVZDANIE** do 19. novembra 2026 23:59:59.
 - [ ] **FINÁLNE ODOVZDANIE** do 27. novembra 2026 11:59:59.
 
-## Odporúčané poradie ďalšej práce
+## Otázky na fórum
 
-1. ~~Odstrániť `tmpfile()` – pole tokenov v pamäti.~~ Hotové.
-2. ~~Opraviť chyby precedenčnej analýzy.~~ Hotové.
-3. ~~Výsledok bloku, pravidlá návratovej hodnoty (O11), analýza na požiadanie
-   a graf volaní (O12, finding 4).~~ Hotové.
-4. ~~Zlúčiť vetvu `formatovanie-llvm` (`clang-format`).~~ Hotové (PR #4).
-5. **Overiť precedenčnú analýzu u cvičiaceho / na fóre** (časť 4); ak treba,
-   prepísať slučku na algoritmus z prednášky 8 skôr, než sa na ňu napojí generátor.
-6. Rozhodnúť návrh generátora (časť 6): rozsahy s jedinečným ID, `DEFVAR`
-   na začiatok funkcie, buffery po funkciách, volacia konvencia cez zásobník.
-7. Implementovať generátor IFJcode26 – bez neho nepôjdu validné testy
-   (do pokusného odovzdania 19. 11. aspoň `print`, výrazy, premenné, `if`, `while`).
-8. Dokončiť FUNEXP a zapísať ho do `rozsireni`.
-9. Pridať end-to-end testy a skript do `tests/`.
-10. Spustiť build a testy na Merlin, doplniť hlavičky súborov a dokumentáciu
-    funkcií v `.h`.
-11. Dokončiť dokumentáciu, `rozdeleni`, `rozsireni`, `is_it_ok.sh` a archív;
-    pripraviť odpovede na obhajobu (časť 8).
+1. Musí generovaný kód pretekať na 32 bitoch ako Scala? Vracia `readInt`
+   0 pre hodnoty mimo rozsahu Int?
+2. Boolean ako argument (`print(1 < 2)`): chyba 5 alebo 6? `a < b == c < d`:
+   chyba 2 alebo 6?
+3. Samostatný `return` vo funkcii s typom iným ako `Unit`: chyba 6 alebo 10?
+4. Smie premenná na najvyššej úrovni tela funkcie zatieniť parameter?
+5. Nezarovnaný DEDENT, zlé odsadenie v zátvorkách, tabulátor v reťazci:
+   chyba 1 alebo 2?
 
 ## Zoznam úloh
 
-Všetky otvorené úlohy na jednom mieste (podrobnosti v príslušnej časti).
-
 **Pred pokusným odovzdaním (19. 11. 2026):**
 
-- [ ] Overiť precedenčnú analýzu u cvičiaceho / na fóre (časť 4).
-- [ ] Rozhodnúť návrh generátora: rozsahy, `DEFVAR`, buffery, volacia konvencia (časť 6).
-- [ ] Doplniť jedinečné ID rozsahu do `Scope` (časť 6).
-- [ ] Implementovať základ generátora: hlavička, `print`, výrazy, premenné,
-  `if`, `while`, volania funkcií (časť 6).
-- [ ] Otestovať výstup cez interpret `ic26int`, kód iba na `stdout` (časť 6).
-- [ ] Hlavičky zdrojových súborov s autormi a popisom (časť 1).
-- [ ] Vytvoriť `rozdeleni` a `rozsireni` (časť 8).
+- [ ] Vytvoriť `rozsireni` (`FUNEXP`) a `rozdeleni` (časť 8).
+- [ ] Opraviť `readInt` mimo rozsahu Int a test `readint_pretecenie` (časť 6).
+- [ ] Kontrola `nil` v `readLine` pri EOF (časť 6).
+- [ ] `1e999` ako lexikálna chyba 1 (časť 3).
+- [ ] Hlavičky zdrojových súborov s autormi a loginmi (časť 1).
+- [ ] `clang-format -i` na `parser.c`, `codegen.c`, `main.c`, `symtable.h`
+  (časť 1).
 
 **Do finálneho odovzdania (27. 11. 2026):**
 
-- [ ] Dokončiť generátor vrátane vstavaných funkcií a chyby 40 pri `subStr` (časť 6).
-- [ ] Dokončiť FUNEXP (časť 4).
-- [ ] Rozhodnúť kľúčové slová `Boolean`, `case`, `for`, … v scanneri (časť 4).
-- [ ] Opraviť porovnanie `Unit == Unit` a poradie chýb medzi priechodmi (časť 5).
-- [ ] Overiť na fóre: chyba 6 vs. 10 pri `return`, `1 < 2 < 3`, `val x`
-  s parametrom `x` (časť 5).
-- [ ] Uvoľnenie pamäte pri chybe (`current_tok`, symbolová tabuľka) (časť 1).
-- [ ] End-to-end testy a skript v `tests/`, chybové vstupy z lokálnej sady (časť 7).
-- [ ] Testy hraničných prípadov scanneru a tabuliek (časti 2, 3).
+- [ ] Otázky na fórum a podľa odpovedí upraviť kódy chýb a pretečenie Int.
+- [ ] Limity vracajúce 99 (kapacita tabuľky, hĺbka odsadenia) a segfault pri
+  hlbokom vnorení volaní (časti 2, 3, 4).
+- [ ] Kontroly zlyhania alokácie v `main.c`, `parser.c`, `symtable.c` (časť 2).
+- [ ] Poradie chýb medzi priechodmi (časť 5).
+- [ ] Doplniť e2e testy chybových kódov 1, 4 a ďalších (časť 7).
 - [ ] Build a testy na serveri Merlin (časť 7).
-- [ ] Drobné výnimky v pomenovaní (časť 7).
-- [ ] Dokumentácia funkcií v `.h` (časť 8).
+- [ ] Aktualizovať `Generator postup.md` (časť 6).
+- [ ] Drobné výnimky v pomenovaní (časť 7), dokumentácia funkcií v `.h`.
 - [ ] LL gramatika a LL tabuľka, stavový diagram scanneru (časti 3, 4).
-- [ ] `dokumentace.pdf`, `README.md`, záznam použitia AI (časť 8).
-- [ ] Odpovede na obhajobu (časť 8).
+- [ ] `dokumentace.pdf`, `README.md`, odpovede na obhajobu (časť 8).
 - [ ] `is_it_ok.sh` a kontrola archívu (časť 8).
