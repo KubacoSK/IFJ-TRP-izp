@@ -146,13 +146,18 @@ Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,
   sym->data.func.params = NULL;
 
   if (param_count > 0 && params) {
-    sym->data.func.params = (Param *)malloc(sizeof(Param) * param_count);
+    sym->data.func.params = (Param *)calloc(param_count, sizeof(Param));
     if (!sym->data.func.params) {
       free_symbol(sym);
       return NULL;
     }
     for (size_t i = 0; i < param_count; i++) {
       sym->data.func.params[i].name = str_dup(params[i].name);
+      // Kontrola alokacie
+      if (!sym->data.func.params[i].name) {
+        free_symbol(sym);
+        return NULL;
+      }
       sym->data.func.params[i].type = params[i].type;
     }
   }
