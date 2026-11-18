@@ -48,6 +48,20 @@ test: test_scanner test_ht test_symtable
 test_e2e: ifj26
 	bash tests/e2e.sh
 
+# Vygenerovane pomocou AI (Gemini)
+# Prompt: "do makefile mi zase dopln volanie mojich testov prosim co najjednoduchsie ale zaroven citatelne"
+test_adam: ifj26
+	@ok=0; total=0; \
+	for f in tests/scanner/*/*.in tests/parser/*/*.in tests/codegen/*/*.in; do \
+		exp=$$(awk '/^EXIT_CODE:/{print $$2}' "$${f%.in}.out" | tr -d '\r'); \
+		./ifj26 < "$$f" >/dev/null 2>&1; res=$$?; total=$$((total+1)); \
+		if [ "$$res" = "$$exp" ]; then ok=$$((ok+1)); echo "[OK]   $$f"; \
+		else echo "[FAIL] $$f (expected $$exp, got $$res)"; fi; \
+	done; \
+	echo "=== Vysledok: $$ok / $$total ==="
+
+adam: test_adam
+
 check: test test_e2e
 
 build-check: all check
@@ -55,4 +69,4 @@ build-check: all check
 clean:
 	rm -f *.o ifj26 test_runner test_scanner_runner test_ht_runner test_symtable_runner
 
-.PHONY: all test test_scanner test_ht test_symtable test_e2e check build-check clean
+.PHONY: all test test_scanner test_ht test_symtable test_e2e test_adam adam check build-check clean
