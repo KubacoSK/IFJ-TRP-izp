@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+3 -3 -3 3 -2
+# Čo sa testuje v generátore kódu (Sekcia 3 a Revízia špecifikácie str. 26):
+# "Dělení dvou hodnot Int je celočíselné a zaokrouhluje k nule (tzn. -5/2 = -2)."
+# Inštrukcia IDIV v IFJcode26 zaokrúhľuje k nule.

@@ -1,0 +1,17 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val d1 = 3.14
+  val d2 = 0.0
+  val d3 = 0.5
+  val d4 = .5
+  val d5 = 10.25e10
+  val d6 = 1.5E-3
+  val d7 = 2.0e+4
+  val d8 = 42e5
+  val d9 = 1_000.500_1e1_0
+  val d10 = 1.5d
+  val d11 = 2.5D
+  val d12 = .25d
+  val d13 = 1e3D
+  ()

@@ -1,0 +1,7 @@
+import ifj26.*
+
+/* Vonkajsi blokovy komentar
+   /* Vnutorny vnoreny komentar je ukonceny */
+   ale vonkajsi uz nie je ukonceny pred EOF
+@main def run(): Unit =
+  val x = 10

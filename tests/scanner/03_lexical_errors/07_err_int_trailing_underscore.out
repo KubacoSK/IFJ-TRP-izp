@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "mezi dvěma číslicemi smí obsahovat podtržítka" -> podčiarkovník na konci čísla '1_000_' je lexikálna chyba 1.
+KW_VAL ID(x) ASSIGN LEXICAL_ERROR

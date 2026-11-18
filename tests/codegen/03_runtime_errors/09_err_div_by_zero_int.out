@@ -1,0 +1,4 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 57
+# Špecifikácia sekcia 6: "Celočíselné dělení nulou neošetřujte (program skončí s příslušnou chybou interpretu)."
+# Inštrukcia IDIV v IFJcode26 pri delení nulou skončí s chybou 57.

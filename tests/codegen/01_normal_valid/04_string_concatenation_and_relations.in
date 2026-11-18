@@ -1,0 +1,24 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val a = "Hello"
+  val b = "World"
+  val joined = "" + a + " " + b + "!"
+  val joinedNl = joined + "\n"
+  print(joinedNl)
+  if "abc" < "abd" then
+    if "abc" <= "abc" then
+      if "xyz" > "xy" then
+        if "same" == "same" then
+          if "a" != "b" then
+            print("CMP_OK\n")
+          else
+            print("FAIL\n")
+        else
+          print("FAIL\n")
+      else
+        print("FAIL\n")
+    else
+      print("FAIL\n")
+  else
+    print("FAIL\n")

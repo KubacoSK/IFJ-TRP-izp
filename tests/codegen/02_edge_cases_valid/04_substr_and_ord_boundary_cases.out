@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+[][][abc]
+-1 -1 -1 -1 97
+# Čo sa testuje v generátore kódu (Sekcia 4):
+# 1. subStr("abc", 0, 0) a subStr("abc", 2, 2) vrátia prázdny reťazec "" (pretože 0 <= start == end < strLength).
+# 2. subStr("abc", 0, 3) vráti celý reťazec "abc" (pretože end == strLength je povolené).
+# 3. ord(value, index): "Je-li řetězec prázdný nebo index mimo rozsah, vrátí -1."
+#    Generátor kódu musí pred vykonaním inštrukcie STRI2INT skontrolovať index >= 0 a index < STRLEN, inak by STRI2INT zhodil interpret chybou 58!

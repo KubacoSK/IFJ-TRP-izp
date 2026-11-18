@@ -1,0 +1,5 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 58
+# Špecifikácia sekcia 4 a 7.4.3:
+# "chr(code: Int): Pro hodnotu v intervalu 0 až 127 vrátí jednoznakový řetězec s odpovídajícím ASCII kódem. Jiná hodnota vede na běhovou chybu (dle odpovídající instrukce IFJcode26)."
+# Inštrukcia INT2CHAR v IFJcode26 pri hodnote mimo <0; 127> končí s chybou 58.

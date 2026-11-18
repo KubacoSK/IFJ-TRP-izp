@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+# 1. Jedna '"' a dve '""' úvodzovky neukončujú viacriadkový reťazec """...""":
+KW_VAL ID(s1) ASSIGN STRING("Jedna \" uvodzovka a dve \"\" uvodzovky vo vnutri") EOL
+# 2. Vo viacriadkovom reťazci sa escape sekvencie NEVYHODNOCUJÚ (preto \a či \0 nespôsobia chybu 1):
+KW_VAL ID(s2) ASSIGN STRING("Neplatne escape sekvencie \\a \\x \\0 \\ ostavaju doslova!") EOL
+# 3. Komentárové sekvencie vo vnútri reťazca sú bežné znaky:
+KW_VAL ID(s3) ASSIGN STRING("// toto nie je komentar /* ani toto */") EOL
+# 4. Šesť úvodzoviek """""" je prázdny viacriadkový reťazec:
+KW_VAL ID(s4) ASSIGN STRING("") EOL
+EOF

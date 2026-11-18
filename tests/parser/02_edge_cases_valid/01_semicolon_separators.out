@@ -1,0 +1,5 @@
+EXIT_CODE: 0
+STDOUT: 6
+# Špecifikácia sekcia 1.2: "Příkazy jsou odděleny buď tak, že leží na samostatných logických řádcích, nebo uvnitř jednoho logického řádku středníkem (který je tak v roli separátoru)."
+# 1. Logický riadok 1 obsahuje 3 príkazy: ValDef(a=1), VarDef(b=2), ValDef(c=3)
+# 2. Logický riadok 2 obsahuje 2 príkazy: Assign(b = a + b + c), CallStmt(print, [b])

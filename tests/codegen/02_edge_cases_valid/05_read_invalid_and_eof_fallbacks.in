@@ -1,0 +1,17 @@
+import ifj26.*
+
+@main def run(): Unit =
+  // Na vstupe je neplatny zapis cisla ("abc") a nasledne EOF:
+  val badInt = readInt()
+  val eofInt = readInt()
+  val eofDbl = readDouble()
+  val eofLine = readLine()
+  val sDbl = toStr(eofDbl)
+  print(badInt)
+  print(" ")
+  print(eofInt)
+  print(" ")
+  print(sDbl)
+  print(" [")
+  print(eofLine)
+  print("]\n")

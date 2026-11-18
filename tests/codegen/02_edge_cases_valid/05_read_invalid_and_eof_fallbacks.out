@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDIN:
+not_a_number
+STDOUT:
+0 0 0.00 []
+# Čo sa testuje v generátore kódu (Sekcia 4 a Revízia špecifikácie str. 26):
+# "upřesnění: IFJcode26 + IFJ26: chování READ v chybových stavech (vestavěné funkce readInt a readDouble vrací při chybě nulu, ale instrukce READ vrací nil)"
+# "readLine(): pokud je použita po dosažení EOF, je vrácen prázdný řetězec"
+# Generátor kódu musí po inštrukcii READ skontrolovať, či načítaná hodnota nie je nil@nil (napr. cez JUMPIFEQ s nil@nil), a ak áno, nahradiť ju 0, 0.0 alebo ""!

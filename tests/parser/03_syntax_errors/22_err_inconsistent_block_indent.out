@@ -1,0 +1,4 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 1.2 a 6: "Všechny příkazy uvnitř bloku pak mají stejné odsazení."
+# Neodôvodnená zmena odsadenia uprostred bloku (porušenie štruktúry odsadených blokov) -> chyba 2.
+SYNTAX_ERROR

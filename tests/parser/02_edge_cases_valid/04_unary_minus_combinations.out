@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+STDOUT: -10-7-20154
+# Špecifikácia sekcia 3: Unárny '-' má najvyššiu prioritu (1) a pravú asociativitu:
+# b = -(a) = -10
+# c = -(a - 3) = -7
+# d = a * (-2) = -20
+# e = a - (-5) = 15
+# f = -(-4) = 4

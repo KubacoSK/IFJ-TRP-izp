@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+()()()30
+# Čo sa testuje v generátore kódu (Sekcia 2.3 — Návratový typ a návratová hodnota):
+# 1. Ak má funkcia explicitný návratový typ Unit, aj '100 + 200' či 'return 999' musí vrátiť hodnotu () (nie 300 ani 999!).
+# 2. Blok končiaci cyklom while vracia hodnotu ().
+# 3. Predčasný return z vnoreného if vo while cykle musí správne vykonať POPFRAME a RETURN.

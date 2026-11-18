@@ -1,0 +1,30 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val sInt = toStr(42)
+  val sDbl = toStr(1.2345)
+  val sStr = toStr("abc")
+  val sUnit = toStr(())
+  val line1 = sInt + "|" + sDbl + "|" + sStr + "|" + sUnit + "\n"
+  print(line1)
+
+  val negDbl = -3.99
+  val i1 = toInt(3.99)
+  val i2 = toInt(negDbl)
+  print(i1)
+  print(" ")
+  print(i2)
+  print("\n")
+
+  val len = strLength("IFJ26\n")
+  val sub = subStr("abcdef", 1, 4)
+  val code = ord("ABC", 1)
+  val ch = chr(66)
+  print(len)
+  print(" ")
+  print(sub)
+  print(" ")
+  print(code)
+  print(" ")
+  print(ch)
+  print("\n")

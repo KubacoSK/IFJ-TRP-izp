@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+# Jednoriadkové a viacriadkové reťazce (viacriadkový príklad priamo zo strany 3 špecifikácie):
+STRING("") EOL
+STRING("Ahoj svet") EOL
+STRING("Escape sekvencie: \\ \" \n \r \t koniec") EOL
+# Vo viacriadkovom reťazci """...""" sa escape sekvencie NEVYHODNOCUJÚ (\n ostáva ako dva znaky '\' a 'n'):
+KW_VAL ID(x) ASSIGN STRING("A\n  hoj s\\nvete\n  ") EOL
+EOF

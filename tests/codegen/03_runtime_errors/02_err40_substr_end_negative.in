@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val neg1 = -1
+  val s = subStr("hello", 0, neg1)
+  print(s)

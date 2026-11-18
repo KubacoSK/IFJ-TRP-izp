@@ -1,0 +1,6 @@
+EXIT_CODE: 0
+STDOUT: 39
+# Očakávaná syntaktická štruktúra (AST):
+# 1. earlyReturn: obe vetvy if/else končia príkazom Return(expr)
+# 2. blockResult: blok končí samostatným výrazom BinaryOp(*, Id(y), Int(3)), ktorý tvorí návratovú hodnotu
+# 3. testReturns: končí samostatným príkazom Return() bez hodnoty (povolené vo funkcii s explicitným návratovým typom Unit)

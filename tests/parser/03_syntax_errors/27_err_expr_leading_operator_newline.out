@@ -1,0 +1,3 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 1.2 a 3: "Logický řádek nemůže začínat operátorem." (Unárne '+' sa navyše netestuje a '+' na začiatku nového riadku nesmie nadviazať na predchádzajúci riadok) -> syntaktická chyba 2.
+SYNTAX_ERROR

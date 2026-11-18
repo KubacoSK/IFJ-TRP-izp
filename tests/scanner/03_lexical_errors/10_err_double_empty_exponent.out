@@ -1,0 +1,4 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Exponent začíná znakem e nebo E, za kterým může následovat znaménko a musí následovat alespoň jedna číslice."
+# '1.5e+' bez číslice je lexikálna chyba 1.
+KW_VAL ID(x) ASSIGN LEXICAL_ERROR

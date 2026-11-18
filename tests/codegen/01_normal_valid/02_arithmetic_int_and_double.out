@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+28 72 10.50 -10.50
+# Čo sa testuje v generátore kódu:
+# 1. Celočíselné inštrukcie ADD, SUB, MUL, IDIV (8 / 3 == 2, a == 28) a unárne mínus (SUB od 0).
+# 2. Desatinné inštrukcie ADD, SUB, MUL, DIV (3.0 / 2.0 == 1.5, x == 10.50) a unárne mínus.

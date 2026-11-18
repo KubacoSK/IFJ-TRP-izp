@@ -1,0 +1,9 @@
+EXIT_CODE: 0
+STDOUT: 6
+# Očakávaná syntaktická štruktúra (AST):
+# WhileStmt(cond = BinaryOp(>, Id(i), Int(0)))
+# └── body:
+#     ├── VarDef(j = Id(i))
+#     ├── WhileStmt(cond = BinaryOp(>, Id(j), Int(0)))
+#     │   └── body: [Assign(sum = sum + 1), Assign(j = j - 1)]
+#     └── Assign(i = i - 1)

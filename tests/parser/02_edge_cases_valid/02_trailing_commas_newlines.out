@@ -1,0 +1,3 @@
+EXIT_CODE: 0
+STDOUT: 60
+# Špecifikácia sekcia 1.2: "Za poslední položkou neprázdného seznamu parametrů, argumentů... je povolena koncová čárka, pouze pokud je následujícím tokenem uzavírací závorka a mezi čárkou a touto závorkou je znak konce řádku. Mezi nimi mohou být pouze bílé znaky a komentáře."

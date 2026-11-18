@@ -1,0 +1,14 @@
+import ifj26.*
+
+@main def testUnaryMinus(): Unit =
+  val a = 10
+  val b = -a
+  val c = -(a - 3)
+  val d = a * -2
+  val e = a - -5
+  val f = - -4
+  print(b)
+  print(c)
+  print(d)
+  print(e)
+  print(f)

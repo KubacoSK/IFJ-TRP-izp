@@ -1,0 +1,26 @@
+import ifj26.*
+
+@main def testPrecedence(): Unit =
+  // Priorita: * a / maju vyssiu prioritu ako + a -; lava asociativita
+  val a = 2 + 3 * 4 - 10 / 2
+  // Zvysenie priority zatvorkami a unarny minus
+  val b = -(2 + 3) * (4 - 1)
+  // Konkatenacia retazcov
+  val s = "IFJ" + "26"
+  // Relacne operatory maju nizsiu prioritu ako aritmeticke: (a + 1) <= (20 - 5)
+  if a + 1 <= 20 - 5 then
+    if b < 0 then
+      if a >= 9 then
+        if s == "IFJ26" then
+          if s != "other" then
+            print(a)
+          else
+            ()
+        else
+          ()
+      else
+        ()
+    else
+      ()
+  else
+    ()

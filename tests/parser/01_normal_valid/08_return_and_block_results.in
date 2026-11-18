@@ -1,0 +1,17 @@
+import ifj26.*
+
+def earlyReturn(x: Int): Int =
+  if x < 0 then
+    return 0
+  else
+    return x * 2
+
+def blockResult(x: Int): Int =
+  val y = x + 5
+  y * 3
+
+@main def testReturns(): Unit =
+  val r1 = earlyReturn(4)
+  val r2 = blockResult(r1)
+  print(r2)
+  return

@@ -1,0 +1,4 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.2: "Pro odsazení se používají pouze mezery (tabulátor na začátku neprázdného řádku je lexikální chyba 1)."
+KW_DEF ID(foo) LPAREN RPAREN COLON KW_UNIT ASSIGN EOL
+LEXICAL_ERROR

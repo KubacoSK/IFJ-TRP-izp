@@ -1,0 +1,13 @@
+EXIT_CODE: 0
+STDOUT: Hello60
+# Očakávaná syntaktická štruktúra (AST):
+# Program
+# ├── Prolog: import ifj26.*
+# ├── FunctionDef(name="add", isMain=false, params=[a: Int, b: Int], returnType=Int, singleLine=true)
+# │   └── BinaryOp(+, Id(a), Id(b))
+# ├── FunctionDef(name="doubleVal", isMain=false, params=[x: Int], returnType=INFERRED, singleLine=true)
+# │   └── BinaryOp(*, Id(x), Int(2))
+# ├── FunctionDef(name="greet", isMain=false, params=[], returnType=INFERRED, singleLine=false)
+# │   └── Block [ValDef(msg: String = "Hello"), Id(msg)]
+# └── FunctionDef(name="runProgram", isMain=true, params=[], returnType=Unit, singleLine=false)
+#     └── Block [ValDef(s = Call(add, [10, 20])), ValDef(d = Call(doubleVal, [s])), ValDef(g = Call(greet, [])), Call(print, [g]), Call(print, [d])]

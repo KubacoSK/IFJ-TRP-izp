@@ -1,0 +1,20 @@
+import ifj26.*
+
+def add(
+    a: Int,
+    b: Int, // koncova ciarka pred LF a ')'
+): Int =
+  var sum = (a +
+    b)
+
+      // prazdny riadok s inym odsadenim nemeni uroven bloku
+  if sum > 0 then
+    while sum > 10 do
+      sum = sum - 1
+    return sum
+  else
+    return 0
+
+@main def run(): Unit =
+  val r = add(1, 2)
+  ()

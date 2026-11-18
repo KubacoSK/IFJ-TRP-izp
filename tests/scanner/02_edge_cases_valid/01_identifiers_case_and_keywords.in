@@ -1,0 +1,30 @@
+import ifj26.*
+
+@main def main(): Unit =
+  val If = 1
+  val IF = 2
+  val DEF = 3
+  val Do = 4
+  val Else = 5
+  val Then = 6
+  val While = 7
+  val Val = 8
+  val Var = 9
+  val Return = 10
+  val int = 11
+  val double = 12
+  val string = 13
+  val unit = 14
+  val Main = 15
+  val _a = 16
+  val _1 = 17
+  val __ = 18
+  val ___ = 19
+  val _if = 20
+  val _def = 21
+  val if1 = 22
+  val while_loop = 23
+  val def_fn = 24
+  val Int32 = 25
+  val return0 = 26
+  ()

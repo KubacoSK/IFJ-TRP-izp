@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def run(): Unit =
+  // Pre prazdny retazec "" je strLength("") == 0, takze start (0) >= strLength (0) -> chyba 40!
+  val s = subStr("", 0, 0)
+  print(s)

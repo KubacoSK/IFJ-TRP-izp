@@ -1,0 +1,35 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val x = 10
+  val y = 20
+  if x < y then
+    print("1")
+  else
+    print("0")
+  if x <= 10 then
+    print("1")
+  else
+    print("0")
+  if y > x then
+    print("1")
+  else
+    print("0")
+  if y >= 20 then
+    print("1")
+  else
+    print("0")
+  if x == 10 then
+    print("1")
+  else
+    print("0")
+  if x != y then
+    print("1")
+  else
+    print("0")
+  val u1: Unit = ()
+  val u2: Unit = ()
+  if u1 == u2 then
+    print("1\n")
+  else
+    print("0\n")

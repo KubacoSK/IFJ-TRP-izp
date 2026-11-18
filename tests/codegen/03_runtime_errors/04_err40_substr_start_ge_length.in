@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def run(): Unit =
+  // "hello" ma dlzku 5, takze start == 5 splna podmienku start >= strLength(value) -> chyba 40!
+  val s = subStr("hello", 5, 5)
+  print(s)

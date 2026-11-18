@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+1.23
+# Čo sa testuje v generátore kódu (Sekcia 4 a Revízia špecifikácie str. 26):
+# "instrukce FLOAT2STR a vestavěná funkce toStr pro typ Double vždy vypíšou textovou reprezentaci ve formátu %.2f"
+# Teda toStr(1.2345) musí vrátiť reťazec "1.23".

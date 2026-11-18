@@ -1,0 +1,6 @@
+import ifj26.*
+
+def foo(x): Int = x
+
+@main def main(): Unit =
+  ()

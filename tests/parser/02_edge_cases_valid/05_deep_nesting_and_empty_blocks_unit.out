@@ -1,0 +1,4 @@
+EXIT_CODE: 0
+STDOUT: 0
+# Špecifikácia sekcia 2.1: "Pro zápis bloku, který neobsahuje žádný efektivní příkaz, je možné jako tělo využít např. výraz tvořený samostatným literálem ()."
+# Zároveň testuje viacnásobný návrat z hlbokého vnorenia blokov (viac DEDENT tokenov za sebou).

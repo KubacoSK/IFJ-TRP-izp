@@ -1,0 +1,5 @@
+import ifj26.*
+
+@main def run(): Unit =
+  /* Viacriadkovy blokovy komentar
+     obsahuje znak noveho riadku LF */ val x = 10

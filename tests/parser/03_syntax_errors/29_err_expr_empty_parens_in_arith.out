@@ -1,0 +1,3 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 1.1 a 3: Literál typu Unit sa zapisuje '()' bez medzery; zátvorky '( )' s medzerou sú prázdne zátvorky bez výrazu vo vnútri -> syntaktická chyba 2 (príp. ak scanner zoberie '( )' ako Unit, násobenie Unit * Int hodí typovú chybu 6).
+SYNTAX_ERROR

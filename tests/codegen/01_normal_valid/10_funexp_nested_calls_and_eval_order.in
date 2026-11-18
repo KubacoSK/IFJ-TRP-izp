@@ -1,0 +1,13 @@
+import ifj26.*
+
+def sq(x: Int): Int = x * x
+def combine(a: Int, b: Int, c: Int): Int = a * 100 + b * 10 + c
+
+@main def run(): Unit =
+  // FUNEXP (Sekcia 5.1): volania funkcii vo vyrazoch, vyrazy ako argumenty a vnorovanie
+  val res = 2 * sq(1 + 2) + strLength(subStr("abcdef", 1 + 1, 5))
+  print(toStr(res) + "\n")
+
+  // Argumenty sa vyhodnocuju zlava doprava:
+  val order = combine(sq(1), sq(2), sq(3))
+  print(toStr(order) + "\n")

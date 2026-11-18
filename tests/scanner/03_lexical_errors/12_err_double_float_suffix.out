@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Sufixy f a F podporovány nejsou." (Povolené sú iba d a D).
+KW_VAL ID(x) ASSIGN LEXICAL_ERROR

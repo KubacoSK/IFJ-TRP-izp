@@ -1,0 +1,8 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val d = 1.2345
+  val s = toStr(d)
+  // toStr(Double) pouziva FLOAT2STR (format "%.2f" -> "1.23")
+  print(s)
+  print("\n")

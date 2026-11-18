@@ -1,0 +1,23 @@
+EXIT_CODE: 0
+# 1. Znak LF vo vnútri zátvoriek (...) sa považuje za biely znak (neukončuje logický riadok a negeneruje INDENT/DEDENT),
+#    pričom pokračujúce riadky vo vnútri (...) sú odsadené viac než začiatok príslušného logického riadku.
+# 2. Za poslednou položkou je povolená koncová čiarka, ak nasleduje LF (príp. komentár) a ')'.
+KW_DEF ID(add) LPAREN ID(a) COLON KW_INT COMMA ID(b) COLON KW_INT COMMA RPAREN COLON KW_INT ASSIGN EOL
+INDENT
+KW_VAL ID(sum) ASSIGN LPAREN ID(a) PLUS ID(b) RPAREN EOL
+# 3. Prázdne riadky a riadky tvorené len bielymi znakmi/komentármi nemenia aktuálnu úroveň odsadenia.
+KW_IF ID(sum) GT INT(0) KW_THEN EOL
+INDENT
+KW_WHILE ID(sum) GT INT(10) KW_DO EOL
+INDENT
+ID(sum) EOL
+# 4. Viacnásobný návrat z vnorených blokov vygeneruje príslušný počet DEDENT tokenov:
+DEDENT
+DEDENT
+KW_ELSE EOL
+INDENT
+INT(0) EOL
+# 5. Súbor končiaci priamo na EOF bez záverečného LF uzavrie všetky otvorené bloky:
+DEDENT
+DEDENT
+EOF

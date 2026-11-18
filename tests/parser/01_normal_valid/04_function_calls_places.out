@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+STDOUT: 12
+# Špecifikácia sekcia 2.3: Všetkých 5 povolených miest volania funkcie v základnom zadaní (bez FUNEXP):
+# 1. Inicializácia premennej: val a = inc(10)
+# 2. Pravá strana priradenia: b = returnCall(a)
+# 3. Samostatne stojaci príkaz: print(b)
+# 4. Telo jednoriadkovej funkcie: def forwardInc(y: Int): Int = inc(y)
+# 5. Hodnota v príkaze return: return forwardInc(z)

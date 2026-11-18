@@ -1,0 +1,3 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 58
+# Špecifikácia sekcia 4 a 7.4.3: chr(128) je mimo intervalu <0; 127> -> inštrukcia INT2CHAR v IFJcode26 skončí s chybou 58.

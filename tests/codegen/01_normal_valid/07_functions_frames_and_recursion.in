@@ -1,0 +1,36 @@
+import ifj26.*
+
+def factorial(n: Int): Int =
+  if n <= 1 then
+    return 1
+  else
+    val prev = n - 1
+    val sub = factorial(prev)
+    return n * sub
+
+// Vzajomna rekurzia a volanie funkcie isOdd pred jej lexikalnou definiciou
+// (Bez rozsirenia CONTROL musia vsetky vetvy koncoveho if vo funkcii s typom Int koncit prikazom return!)
+def isEven(n: Int): Int =
+  if n == 0 then
+    return 1
+  else
+    val prev = n - 1
+    return isOdd(prev)
+
+def isOdd(n: Int): Int =
+  if n == 0 then
+    return 0
+  else
+    val prev = n - 1
+    return isEven(prev)
+
+@main def run(): Unit =
+  val f5 = factorial(5)
+  val e6 = isEven(6)
+  val o6 = isOdd(6)
+  print(f5)
+  print(" ")
+  print(e6)
+  print(" ")
+  print(o6)
+  print("\n")

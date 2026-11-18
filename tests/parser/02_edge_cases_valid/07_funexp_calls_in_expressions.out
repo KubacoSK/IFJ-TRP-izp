@@ -1,0 +1,6 @@
+EXIT_CODE: 0
+STDOUT: 42
+# Špecifikácia sekcia 5.1 (FUNEXP – funkce ve výrazech):
+# "Volání vestavěné i uživatelské funkce může být součástí výrazu. Argumentem funkce může být libovolný výraz. Volání lze vnořovat a argumenty se vyhodnocují zleva doprava."
+# result = 2 * mul(inc(3), 5) = 2 * 20 = 40
+# result + strLength(subStr("abcd", 1, 3)) = 40 + 2 = 42

@@ -1,0 +1,4 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Samotné podtržítko není identifikátor a využito bude v rozšířeních."
+# V základnom zadaní bez rozšírenia ALGEBDT nie je samostatné '_' platným identifikátorom (lexikálna chyba 1, prípadne syntaktická chyba 2 ak scanner vracia token UNDERSCORE).
+KW_VAL LEXICAL_ERROR

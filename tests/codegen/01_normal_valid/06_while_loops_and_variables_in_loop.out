@@ -1,0 +1,9 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+30
+# Čo sa testuje v generátore kódu:
+# 1. Cyklus while (LABEL pred vyhodnotením podmienky, podmienený skok von, JUMP späť).
+# 2. Kritická vec pre IFJcode26: premenná 'val step' je deklarovaná vo vnútri tela while cyklu.
+#    Ak generátor umiestni 'DEFVAR LF@step' priamo dovnútra tela cyklu, v 2. iterácii interpret skončí s chybou 52 (redefinícia symbolu)!
+#    DEFVAR musí byť vygenerovaný pred začiatkom cyklu (napr. v prologu funkcie).

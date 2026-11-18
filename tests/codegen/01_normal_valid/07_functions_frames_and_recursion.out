@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+120 1 0
+# Čo sa testuje v generátore kódu:
+# 1. Správa rámcov pri rekurzii (CREATEFRAME, PUSHFRAME, POPFRAME, CALL, RETURN) — lokálne premenné (LF@prev, LF@sub) sa nesmú prepísať pri vnorenom volaní.
+# 2. Volanie funkcie pred jej lexikálnou definíciou a vzájomná rekurzia (isEven <-> isOdd).

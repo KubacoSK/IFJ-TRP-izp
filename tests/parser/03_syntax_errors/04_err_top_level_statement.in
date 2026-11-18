@@ -1,0 +1,6 @@
+import ifj26.*
+
+val globalVar = 42
+
+@main def main(): Unit =
+  print(globalVar)

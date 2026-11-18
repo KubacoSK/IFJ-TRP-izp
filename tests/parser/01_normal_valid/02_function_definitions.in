@@ -1,0 +1,21 @@
+import ifj26.*
+
+// Jednoriadkova funkcia s explicitnym navratovym typom
+def add(a: Int, b: Int): Int = a + b
+
+// Jednoriadkova funkcia bez uvedeneho navratoveho typu (odvodi sa Int)
+def doubleVal(x: Int) = x * 2
+
+// Viacriadkova funkcia bez parametrov a bez uvedeneho navratoveho typu
+def greet() =
+  val msg: String = "Hello"
+  msg
+
+// Anotacia @main na samostatnom riadku pred def
+@main
+def runProgram(): Unit =
+  val s = add(10, 20)
+  val d = doubleVal(s)
+  val g = greet()
+  print(g)
+  print(d)

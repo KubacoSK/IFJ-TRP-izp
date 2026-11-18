@@ -1,0 +1,11 @@
+EXIT_CODE: 0
+# Celočíselné literály typu Int (podčiarkovníky medzi číslicami sú ignorované vo výslednej hodnote):
+INT(0) EOL
+INT(42) EOL
+INT(1000000) EOL
+INT(1000000) EOL
+INT(98765) EOL
+# Záporný zápis je podľa špecifikácie tvorený unárnym operátorom '-' a kladnou časťou literálu:
+MINUS INT(42) EOL
+MINUS INT(1000) EOL
+EOF

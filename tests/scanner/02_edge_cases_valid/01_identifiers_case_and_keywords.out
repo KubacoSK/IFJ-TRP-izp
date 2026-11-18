@@ -1,0 +1,12 @@
+EXIT_CODE: 0
+# Case-sensitivity: zmena veľkosti písmen v kľúčových slovách z nich robí bežné identifikátory!
+ID(If) ID(IF) ID(DEF) ID(Do) ID(Else) ID(Then) ID(While) ID(Val) ID(Var) ID(Return) EOL
+# Typy s malým začiatočným písmenom sú identifikátory (kľúčové slová sú Int, Double, String, Unit):
+ID(int) ID(double) ID(string) ID(unit) EOL
+# Samotné 'main' bez '@' je platný identifikátor (nie je v tabuľke zakázaných kľúčových slov):
+ID(main) ID(Main) EOL
+# Samotné '_' nie je identifikátor, ale '_a', '_1', '__', '___' UŽ SÚ platné identifikátory:
+ID(_a) ID(_1) ID(__) ID(___) ID(_if) ID(_def) EOL
+# Kľúčové slová ako prefix dlhšieho identifikátora:
+ID(if1) ID(while_loop) ID(def_fn) ID(Int32) ID(return0) EOL
+EOF

@@ -1,0 +1,5 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val s = """Neukonceny viacriadkovy retazec
+obsahuje len dve uvodzovky na konci ""

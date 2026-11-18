@@ -1,0 +1,11 @@
+/* vonkajsi /* stredny /* vnutorny */ stredny */ vonkajsi */
+import ifj26.*
+
+@main def run(): Unit =
+  val/*c1*/x/*c2*/=/*c3*/10
+  // riadkovy komentar s neukoncenym /* blokovym komentarom a tabulatorom	koniec
+  /* blokovy komentar s // riadkovym komentarom, ktory neignoruje koniec */
+  val y = 20 /* viacriadkovy komentar na konci riadku za prikazom
+     pokracuje tu a konci bez dalsich tokenov na riadku */
+  val z = 30
+  ()

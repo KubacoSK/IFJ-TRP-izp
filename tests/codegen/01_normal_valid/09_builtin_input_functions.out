@@ -1,0 +1,11 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDIN:
+Prvy riadok
+125
+3.5
+STDOUT:
+Prvy riadok
+125 3.50
+# Čo sa testuje v generátore kódu:
+# Vstavané čítacie funkcie readLine() (READ string), readInt() (READ int) a readDouble() (READ float).

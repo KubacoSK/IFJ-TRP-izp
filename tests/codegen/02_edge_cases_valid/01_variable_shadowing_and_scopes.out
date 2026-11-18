@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+inner_if 99 inner_if 10
+# Čo sa testuje v generátore kódu (Sekcia 2.2 — Shadowing):
+# "V podbloku lze překrýt (angl. shadowing) proměnnou nadřazeného bloku novou definicí stejného jména."
+# Generátor kódu musí v IFJcode26 odlíšiť mená premenných z rôznych rozsahov platnosti (napr. LF@x$1, LF@x$2, LF@x$3),
+# inak buď zlyhá na dvojitom DEFVAR LF@x (chyba 52), alebo prepíše hodnotu vonkajšej premennej!

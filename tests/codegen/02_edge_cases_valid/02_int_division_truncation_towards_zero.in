@@ -1,0 +1,18 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val a = 7 / 2
+  val b = -7 / 2
+  val c = 7 / -2
+  val d = -7 / -2
+  val e = -5 / 2
+  print(a)
+  print(" ")
+  print(b)
+  print(" ")
+  print(c)
+  print(" ")
+  print(d)
+  print(" ")
+  print(e)
+  print("\n")

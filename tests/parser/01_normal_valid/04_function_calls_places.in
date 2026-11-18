@@ -1,0 +1,20 @@
+import ifj26.*
+
+def inc(x: Int): Int =
+  return x + 1
+
+// 4. Telo jednoriadkovej funkcie tvorene volanim funkcie
+def forwardInc(y: Int): Int = inc(y)
+
+// 5. Hodnota v prikaze return tvorena volanim funkcie
+def returnCall(z: Int): Int =
+  return forwardInc(z)
+
+@main def testCalls(): Unit =
+  // 1. Inicializacia premennej volanim funkcie
+  val a = inc(10)
+  var b: Int = 0
+  // 2. Prava strana prikazu priradenia tvorena volanim funkcie
+  b = returnCall(a)
+  // 3. Samostatne stojaci prikaz volania funkcie
+  print(b)

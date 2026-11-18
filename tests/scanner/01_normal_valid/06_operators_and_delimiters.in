@@ -1,0 +1,27 @@
+import ifj26.*
+
+def opTest(a: Int, b: Int): Unit =
+  val sum = (a + b) - (a * b) / 1; val u: Unit = ()
+  if a < b then
+    if a <= b then
+      ()
+    else
+      ()
+  else
+    if a > b then
+      if a >= b then
+        ()
+      else
+        ()
+    else
+      ()
+  if a == b then
+    ()
+  else
+    if a != b then
+      ()
+    else
+      ()
+
+@main def run(): Unit =
+  opTest(10, 5)

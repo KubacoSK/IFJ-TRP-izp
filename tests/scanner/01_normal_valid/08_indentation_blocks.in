@@ -1,0 +1,13 @@
+import ifj26.*
+
+def foo(x: Int): Int =
+  var res = x
+  if res > 0 then
+    res = res + 1
+  else
+    res = 0
+  res
+
+@main def run(): Unit =
+  val r = foo(5)
+  ()

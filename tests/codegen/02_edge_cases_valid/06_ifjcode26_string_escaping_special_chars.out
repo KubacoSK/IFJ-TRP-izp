@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+Medzera Mriezka#Lomitko\Tab	Koniec
+# Čo sa testuje v generátore kódu (Sekcia 7.3, str. 20):
+# "Escape sekvence, která je nezbytná pro znaky s ASCII kódem 000–032, 035 a 092, je tvaru \xyz, kde xyz je dekadické číslo v rozmezí 000–255 složené právě ze tří číslic"
+# Ak generátor nevygeneruje '\035' pre '#' alebo '\032' pre medzeru v string@..., interpret ic26int vyhodí chybu 51!

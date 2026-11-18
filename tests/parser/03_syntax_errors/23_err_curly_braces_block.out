@@ -1,0 +1,4 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 1.2: "IFJ26 nepodporuje složené závorky pro ohraničení bloků. Bloky jsou vymezeny výhradně odsazením."
+# Pozn.: Ak váš scanner odmieta '{' a '}' už na lexikálnej úrovni (keďže bez INTERPOLATEDS sa '{' nepoužíva), vráti chybu 1; ak ich posúva parseru, vráti chybu 2.
+SYNTAX_OR_LEXICAL_ERROR

@@ -1,0 +1,16 @@
+import ifj26.*
+
+def helper(x: Int, d: Double, s: String): Unit =
+  val myVar123: Int = x
+  var _temp: Double = d
+  val _a_b_c_99: String = s
+  var CamelCase: Int = 0
+  while CamelCase < myVar123 do
+    if CamelCase == 0 then
+      CamelCase = CamelCase + 1
+    else
+      CamelCase = CamelCase + 2
+  return
+
+@main def factorial(): Unit =
+  helper(1, 2.5, "ok")

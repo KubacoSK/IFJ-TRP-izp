@@ -1,0 +1,14 @@
+import ifj26.*
+
+@main def testVars(): Unit =
+  val a: Int = 10
+  val b = 20
+  var c: Double = 3.5
+  var d = 1.5
+  val s: String = "IFJ"
+  val u: Unit = ()
+  c = c + d
+  d = a + b
+  print(s)
+  print(c)
+  print(u)

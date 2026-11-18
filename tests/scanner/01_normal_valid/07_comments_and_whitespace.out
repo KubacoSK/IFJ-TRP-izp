@@ -1,0 +1,6 @@
+EXIT_CODE: 0
+# Fyzické riadky obsahujúce iba komentáre sú ignorované; jednoriadkový /* */ sa správa ako medzera:
+KW_VAL ID(a) ASSIGN INT(10) EOL
+KW_VAL ID(b) ASSIGN INT(20) EOL
+KW_VAL ID(c) ASSIGN INT(30) EOL
+EOF

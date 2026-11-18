@@ -1,0 +1,18 @@
+EXIT_CODE: 0
+# Hraničné tvary číselných literálov a tesné spojenia bez medzier:
+DOUBLE(0.0) EOL        # .0
+DOUBLE(0.0001) EOL     # .000_1
+DOUBLE(0.0) EOL        # 0.0
+DOUBLE(0.0) EOL        # 0.000_0
+DOUBLE(0.0) EOL        # 0e0
+DOUBLE(0.0) EOL        # 0E+0
+DOUBLE(0.0) EOL        # 0e-0
+DOUBLE(0.0) EOL        # 0.0d
+DOUBLE(5e-11) EOL      # .5e-10D
+DOUBLE(100e10) EOL     # 1_0_0e1_0
+# Výrazy bez medzier — nesmú sa zlúčiť do jedného chybného tokenu:
+INT(10) MINUS INT(5) EOL
+DOUBLE(10.5) MINUS DOUBLE(2.5) EOL
+# Jednoriadkový blokový komentár uprostred výrazu bez medzier oddeľuje tokeny:
+INT(1) PLUS INT(2) EOL
+EOF

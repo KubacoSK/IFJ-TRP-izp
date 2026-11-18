@@ -1,0 +1,27 @@
+import ifj26.*
+
+@main def run(): Unit =
+  // Hranicne, ale PLATNE volania subStr (nesmu skoncit chybou 40!):
+  val s1 = subStr("abc", 0, 0)
+  val s2 = subStr("abc", 2, 2)
+  val s3 = subStr("abc", 0, 3)
+  val out = "[" + s1 + "][" + s2 + "][" + s3 + "]\n"
+  print(out)
+
+  // Hranicne volania ord: prazdny retazec alebo index mimo rozsah vracia -1 (nesmie padnut na chybu 58 v STRI2INT!):
+  val neg1 = -1
+  val o1 = ord("", 0)
+  val o2 = ord("abc", neg1)
+  val o3 = ord("abc", 3)
+  val o4 = ord("abc", 100)
+  val o5 = ord("abc", 0)
+  print(o1)
+  print(" ")
+  print(o2)
+  print(" ")
+  print(o3)
+  print(" ")
+  print(o4)
+  print(" ")
+  print(o5)
+  print("\n")

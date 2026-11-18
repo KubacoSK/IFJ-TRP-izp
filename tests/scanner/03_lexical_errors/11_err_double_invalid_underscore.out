@@ -1,0 +1,4 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: Podčiarkovník v desatinnom literáli smie byť iba medzi dvoma číslicami.
+# Tvary '1_.5', '1._5', '1.5_e2', '1.5e_2' sú lexikálna chyba 1.
+KW_VAL ID(x) ASSIGN LEXICAL_ERROR
