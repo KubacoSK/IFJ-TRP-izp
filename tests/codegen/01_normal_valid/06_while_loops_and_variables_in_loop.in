@@ -1,0 +1,12 @@
+import ifj26.*
+
+@main def run(): Unit =
+  var i = 1
+  var sum = 0
+  while i <= 5 do
+    // Pozor: DEFVAR pre lokalnu premennu 'step' vo vnutri cyklu sa v IFJcode26 nesmie vykonat viackrat v tom istom ramci (inak chyba 52)!
+    val step = i * 2
+    sum = sum + step
+    i = i + 1
+  print(sum)
+  print("\n")

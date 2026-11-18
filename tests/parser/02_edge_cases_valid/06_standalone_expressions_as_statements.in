@@ -1,0 +1,16 @@
+import ifj26.*
+
+def compute(x: Int): Int =
+  // Samostatne stojace vyrazy uprostred bloku su platne prikazy (ich hodnota sa zahodi):
+  x + 100
+  42
+  ()
+  // Posledny vyraz urci navratovu hodnotu funkcie:
+  x * 10
+
+@main def testExprStmts(): Unit =
+  1 + 2 * 3
+  "unused string literal"
+  val res = compute(5)
+  print(res)
+  ()

@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+STDOUT:
+# Očakávaná syntaktická štruktúra (AST):
+# Program
+# ├── Prolog: import ifj26.*
+# └── FunctionDef(name="main", isMain=true, params=[], returnType=Unit)
+#     └── Block
+#         └── Literal(Unit: ())

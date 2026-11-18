@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+42-70
+Ahoj svet
+()()
+# Čo sa testuje v generátore kódu:
+# 1. Úvodná hlavička .IFJcode26
+# 2. WRITE pre int@42, int@-7, int@0, string@...
+# 3. Hodnota () typu Unit sa pri volaní print() musí vypísať ako reťazec "()" (WRITE string@()).

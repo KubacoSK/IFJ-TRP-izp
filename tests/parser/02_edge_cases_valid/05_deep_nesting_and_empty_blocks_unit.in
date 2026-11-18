@@ -1,0 +1,16 @@
+import ifj26.*
+
+@main def testDeepNesting(): Unit =
+  var x = 2
+  while x > 0 do
+    if x == 1 then
+      ()
+    else
+      if x == 2 then
+        var y = 1
+        while y > 0 do
+          y = y - 1
+      else
+        ()
+    x = x - 1
+  print(x)

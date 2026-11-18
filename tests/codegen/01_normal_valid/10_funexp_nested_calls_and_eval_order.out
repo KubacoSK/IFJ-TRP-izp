@@ -1,0 +1,9 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+21
+149
+# Čo sa testuje v generátore kódu pre rozšírenie FUNEXP (Sekcia 5.1):
+# 1. Volanie užívateľských aj vstavaných funkcií uprostred aritmetických a reťazcových výrazov.
+# 2. Výrazy ako argumenty funkcií (1 + 2, 1 + 1, toStr(res) + "\n").
+# 3. Vnorené volania funkcií (strLength(subStr(...))) a zachovanie medzivýsledkov na zásobníku/v rámcoch.

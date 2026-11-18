@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Jiné číselné soustavy a sufix L nejsou podporovány." -> '0x1F' aj '100L' vedú na chybu.
+KW_VAL ID(x) ASSIGN LEXICAL_ERROR

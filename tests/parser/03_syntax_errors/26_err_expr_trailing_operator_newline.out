@@ -1,0 +1,4 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 1.2: "Neukončený výraz nemůže pokračovat na dalším logickém řádku."
+# Mimo zátvoriek (...) ukončuje znak LF logický riadok, takže 'val x = 1 +' je neukončený výraz -> syntaktická chyba 2.
+SYNTAX_ERROR

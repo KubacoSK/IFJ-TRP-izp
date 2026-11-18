@@ -1,0 +1,22 @@
+import ifj26.*
+
+@main def run(): Unit =
+  var x: Int = 10
+  if x == 10 then
+    // Prekrytie (shadowing) premennej 'x' v podbloku novou definiciou (dokonca ineho typu String!)
+    val x: String = "inner_if"
+    print(x)
+    print(" ")
+    if x == "inner_if" then
+      val x: Int = 99
+      print(x)
+      print(" ")
+    else
+      ()
+    print(x)
+    print(" ")
+  else
+    ()
+  // Vonkajsia premenna 'x' musi mat stale svoju povodnu hodnotu 10!
+  print(x)
+  print("\n")

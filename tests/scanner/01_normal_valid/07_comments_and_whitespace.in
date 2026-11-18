@@ -1,0 +1,12 @@
+// Riadkovy komentar na zaciatku suboru
+import ifj26.*
+
+@main def run(): Unit =
+  val a = 10 // komentar za prikazom
+  val /* jednoriadkovy blokovy komentar */ b = 20
+  /* Viacriadkovy
+     blokovy komentar
+     /* s vnorenym komentarom */
+     koniec */
+  val c = 30
+  ()

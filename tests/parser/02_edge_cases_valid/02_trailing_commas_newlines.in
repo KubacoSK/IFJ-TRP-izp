@@ -1,0 +1,17 @@
+import ifj26.*
+
+def sumThree(
+    a: Int,
+    b: Int,
+    c: Int, // koncova ciarka pred LF a ')'
+): Int =
+  a + b + c
+
+@main def testTrailingComma(): Unit =
+  val res = sumThree(
+    10,
+    20,
+    30,
+    /* komentar medzi koncovou ciarkou a ')' */
+  )
+  print(res)

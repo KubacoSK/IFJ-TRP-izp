@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+# Aritmetické operátory:
+PLUS MINUS MUL DIV EOL
+# Relačné operátory:
+LT LE GT GE EQ NEQ EOL
+# Priradenie, zátvorky, Unit literál a interpunkčné oddeľovače:
+ASSIGN LPAREN RPAREN UNIT_LIT COLON COMMA SEMICOLON DOT EOL
+EOF

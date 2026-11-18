@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+42|1.23|abc|()
+3 -3
+6 bcd 66 B
+# Čo sa testuje v generátore kódu:
+# 1. toStr: INT2STR, FLOAT2STR (formát "%.2f" -> 1.2345 sa vypíše ako "1.23"), String a Unit ("()").
+# 2. toInt: FLOAT2INT (odseknutie desatinnej časti smerom k nule: 3.99 -> 3, -3.99 -> -3).
+# 3. strLength (STRLEN), subStr (GETCHAR + CONCAT v cykle), ord (STRI2INT), chr (INT2CHAR).

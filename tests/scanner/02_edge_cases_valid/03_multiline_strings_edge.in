@@ -1,0 +1,8 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val s1 = """Jedna " uvodzovka a dve "" uvodzovky vo vnutri"""
+  val s2 = """Neplatne escape sekvencie \a \x \0 \ ostavaju doslova!"""
+  val s3 = "// toto nie je komentar /* ani toto */"
+  val s4 = """""""
+  ()

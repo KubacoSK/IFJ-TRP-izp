@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "blokové komentáře mohou být vnořené... neukončený řetězec či komentář (vč. vnořeného) ... vedou na lexikální chybu 1."
+LEXICAL_ERROR

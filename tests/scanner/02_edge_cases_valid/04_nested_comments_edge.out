@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+# 3-úrovňový vnorený komentár na vlastnom riadku sa ignoruje.
+# Jednoriadkové blokové komentáre /*c1*/ fungujú ako biele znaky (oddeľovače tokenov):
+KW_VAL ID(x) ASSIGN INT(10) EOL
+# '/*' vo vnútri '//' sa ignoruje; '//' vo vnútri '/* ... */' nezruší ukončenie '*/':
+KW_VAL ID(y) ASSIGN INT(20) EOL
+KW_VAL ID(z) ASSIGN INT(30) EOL
+EOF

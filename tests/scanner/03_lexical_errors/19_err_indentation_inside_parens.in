@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def foo(): Unit =
+  val x = (1 +
+  2)
+  ()

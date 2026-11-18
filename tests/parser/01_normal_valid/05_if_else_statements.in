@@ -1,0 +1,11 @@
+import ifj26.*
+
+@main def testIf(): Unit =
+  val x = 10
+  if x > 5 then
+    if x == 10 then
+      print("ten")
+    else
+      print("other")
+  else
+    print("small")

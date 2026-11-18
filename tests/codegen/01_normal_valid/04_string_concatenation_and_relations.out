@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+Hello World!
+CMP_OK
+# Čo sa testuje v generátore kódu:
+# 1. Reťazenie CONCAT pre operátor '+' nad typom String (vrátane prázdneho reťazca "").
+# 2. Lexikografické porovnávanie reťazcov pomocou LT, GT, EQ (a kombinácií pre <=, >=, !=).

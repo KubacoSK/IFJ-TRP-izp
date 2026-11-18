@@ -1,0 +1,14 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val neg7 = -7
+  print(42)
+  print(neg7)
+  print(0)
+  print("\n")
+  print("Ahoj svet")
+  print("\n")
+  val u: Unit = ()
+  print(u)
+  print(())
+  print("\n")

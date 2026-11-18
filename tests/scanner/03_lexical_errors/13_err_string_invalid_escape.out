@@ -1,0 +1,4 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Podporovány jsou escape sekvence \\, \", \n, \r a \t. Žádné další escape sekvence nejsou součástí IFJ26."
+# "... \a ..." vedie na lexikálnu chybu 1.
+KW_VAL ID(s) ASSIGN LEXICAL_ERROR

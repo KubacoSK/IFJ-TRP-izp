@@ -1,0 +1,14 @@
+import ifj26.*
+
+@main def testMultilineParens(): Unit =
+  // Mimo zatvoriek vyraz nemoze pokracovat na dalsom riadku, ale VO VNUTRI (...) je LF biely znak:
+  val x = (10 +
+    20 *
+    (3 +
+      4) -
+    5)
+  if (x >
+      100) then
+    print(x)
+  else
+    print(0)

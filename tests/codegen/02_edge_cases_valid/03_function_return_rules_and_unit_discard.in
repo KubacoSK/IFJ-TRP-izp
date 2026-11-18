@@ -1,0 +1,36 @@
+import ifj26.*
+
+// Pravidlo 4 (Sekcia 2.3): Vo funkcii s explicitnym navratovym typom Unit sa navratova hodnota
+// vyhodnoti, ale ZAHODI a funkcia vraci () — plati aj pre return!
+def discardImplicit(): Unit =
+  100 + 200
+
+def discardExplicitReturn(): Unit =
+  return 999
+
+// Pravidlo 2 (Sekcia 2.3): Blok zakonceny definiciou premennej, priradenim alebo cyklom ma vysledok () typu Unit.
+def endsWithWhile(): Unit =
+  var i = 2
+  while i > 0 do
+    i = i - 1
+
+// Pravidlo 1 (Sekcia 2.3): return ihned ukonci funkciu aj z vnorenej vetvy vo vnutri cyklu while.
+def returnFromLoop(limit: Int): Int =
+  var i = 0
+  while i < 10 do
+    if i == limit then
+      return i * 10
+    else
+      i = i + 1
+  return -1
+
+@main def run(): Unit =
+  val u1 = discardImplicit()
+  val u2 = discardExplicitReturn()
+  val u3 = endsWithWhile()
+  val res = returnFromLoop(3)
+  print(u1)
+  print(u2)
+  print(u3)
+  print(res)
+  print("\n")

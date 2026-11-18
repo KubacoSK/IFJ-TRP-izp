@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val zero = 0
+  val x = 10 / zero
+  print(x)

@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+1111111
+# Čo sa testuje v generátore kódu:
+# Generovanie unikátnych návěští (LABEL, JUMPIFEQ, JUMPIFNEQ, JUMP) pre viacero if-else za sebou
+# a porovnanie všetkých relačných operátorov vrátane rovnosti typu Unit (u1 == u2).

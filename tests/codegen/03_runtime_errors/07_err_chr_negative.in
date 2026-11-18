@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val neg1 = -1
+  val c = chr(neg1)
+  print(c)

@@ -1,0 +1,3 @@
+EXIT_CODE: 2
+# Syntaktická chyba 2: neukončené volanie funkcie (chýbajúca uzatváracia zátvorka ')' v zozname argumentov).
+SYNTAX_ERROR

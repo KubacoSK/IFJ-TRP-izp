@@ -1,0 +1,6 @@
+import ifj26.*
+
+@main def run(): Unit =
+  // Znaky s ASCII 000-032 (medzera, \n, \t, \r), 035 (#) a 092 (\) musia byt v IFJcode26 escapovane ako \xyz!
+  val s = "Medzera Mriezka#Lomitko\\Tab\tKoniec\n"
+  print(s)

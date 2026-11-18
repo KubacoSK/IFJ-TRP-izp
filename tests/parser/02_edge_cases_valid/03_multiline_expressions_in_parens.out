@@ -1,0 +1,4 @@
+EXIT_CODE: 0
+STDOUT: 145
+# Špecifikácia sekcia 1.2: "Znak LF uvnitř závorek se považuje za bílý znak, ale nemá funkci konce řádku ve smyslu syntaxe... Uvnitř závorek musí po fyzickém konci řádku být následující řádek odsazen více než začátek příslušného logického řádku."
+# Výraz: (10 + (20 * (3 + 4)) - 5) = 145

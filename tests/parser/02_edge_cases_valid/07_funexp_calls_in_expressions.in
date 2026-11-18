@@ -1,0 +1,12 @@
+import ifj26.*
+
+def inc(x: Int): Int = x + 1
+def mul(a: Int, b: Int): Int = a * b
+
+@main def testFunexp(): Unit =
+  // Rozsirenie FUNEXP (Sekcia 5.1): volanie funkcie vo vyraze, vyrazy v argumentoch a vnorovanie volani
+  val result = 2 * mul(inc(1 + 2), 4 + 1)
+  if inc(result) > 40 then
+    print(toStr(result + strLength(subStr("abcd", 1, 3))))
+  else
+    print("small")

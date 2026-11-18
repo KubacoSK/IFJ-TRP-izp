@@ -1,0 +1,6 @@
+EXIT_CODE: 0
+# Riadok 1: Všetky kľúčové slová základného zadania IFJ26
+KW_DEF KW_DO KW_DOUBLE KW_ELSE KW_IF KW_IMPORT KW_INT KW_RETURN KW_STRING KW_THEN KW_UNIT KW_VAL KW_VAR KW_WHILE EOL
+# Riadok 2: Platné identifikátory (začínajúce písmenom alebo podčiarkovníkom)
+ID(x) ID(factorial) ID(myVar123) ID(_temp) ID(_a_b_c_99) ID(CamelCase) EOL
+EOF

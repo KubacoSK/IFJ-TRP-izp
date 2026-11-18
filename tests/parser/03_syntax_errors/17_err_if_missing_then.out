@@ -1,0 +1,3 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 2.4: Za podmienkou v 'if' musí nasledovať kľúčové slovo 'then'.
+SYNTAX_ERROR

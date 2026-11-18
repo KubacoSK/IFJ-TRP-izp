@@ -1,0 +1,5 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val s = subStr("hello", 3, 2)
+  print(s)

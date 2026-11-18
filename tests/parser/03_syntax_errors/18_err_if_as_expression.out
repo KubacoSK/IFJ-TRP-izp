@@ -1,0 +1,3 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 2.4: "V základním zadání nelze if použít jako výraz. Vizte také rozšíření BOOLTHEN a CONTROL."
+SYNTAX_ERROR

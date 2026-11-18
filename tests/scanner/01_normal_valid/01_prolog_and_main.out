@@ -1,0 +1,8 @@
+EXIT_CODE: 0
+# Očakávaný prúd tokenov (Prolog + @main + prázdne telo s Unit literálom):
+KW_IMPORT ID(ifj26) DOT MUL EOL
+AT_MAIN KW_DEF ID(run) LPAREN RPAREN COLON KW_UNIT ASSIGN EOL
+INDENT
+UNIT_LIT EOL   # alebo: LPAREN RPAREN EOL (podľa vašej reprezentácie Unit literálu)
+DEDENT
+EOF

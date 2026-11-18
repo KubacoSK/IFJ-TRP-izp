@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Pokud uvnitř blokového komentáře není žádný znak nového řádku, komentář se chová jako jeden bílý znak (odděluje tokeny). V opačném případě se chová jako jeden konec řádku a za jeho koncem nesmí být další tokeny (očekává se zde konec řádku, kterému mohou předcházet jen bílé znaky)."
+LEXICAL_ERROR

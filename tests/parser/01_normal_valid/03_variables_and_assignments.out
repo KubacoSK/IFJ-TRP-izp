@@ -1,0 +1,16 @@
+EXIT_CODE: 0
+STDOUT: IFJ0x1.4p+2()
+# Očakávaná syntaktická štruktúra (AST):
+# FunctionDef(name="testVars", isMain=true, params=[], returnType=Unit)
+# └── Block
+#     ├── ValDef(name="a", type=Int, init=Int(10))
+#     ├── ValDef(name="b", type=INFERRED, init=Int(20))
+#     ├── VarDef(name="c", type=Double, init=Double(3.5))
+#     ├── VarDef(name="d", type=INFERRED, init=Double(1.5))
+#     ├── ValDef(name="s", type=String, init=String("IFJ"))
+#     ├── ValDef(name="u", type=Unit, init=Unit(()))
+#     ├── Assign(target="c", value=BinaryOp(+, Id(c), Id(d)))
+#     ├── Assign(target="d", value=BinaryOp(+, Id(a), Id(b)))
+#     ├── CallStmt(print, [Id(s)])
+#     ├── CallStmt(print, [Id(c)])
+#     └── CallStmt(print, [Id(u)])

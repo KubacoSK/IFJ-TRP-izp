@@ -1,0 +1,10 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val s1 = ""
+  val s2 = "Ahoj svet"
+  val s3 = "Escape sekvencie: \\ \" \n \r \t koniec"
+  val x = """A
+  hoj s\nvete
+  """
+  ()

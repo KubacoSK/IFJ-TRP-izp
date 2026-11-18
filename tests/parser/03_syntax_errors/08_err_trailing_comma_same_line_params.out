@@ -1,0 +1,4 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 1.2: "Za poslední položkou neprázdného seznamu parametrů... je povolena koncová čárka, pouze pokud je následujícím tokenem uzavírací závorka a mezi čárkou a touto závorkou je znak konce řádku."
+# Koncová čiarka na tom istom riadku bez LF ('def foo(a: Int, )') je syntaktická chyba 2!
+SYNTAX_ERROR

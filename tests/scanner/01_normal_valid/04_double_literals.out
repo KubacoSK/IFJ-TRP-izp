@@ -1,0 +1,16 @@
+EXIT_CODE: 0
+# Desatinné literály typu Double:
+DOUBLE(3.14) EOL
+DOUBLE(0.0) EOL
+DOUBLE(0.5) EOL
+DOUBLE(0.5) EOL         # .5 (celá časť môže chýbať)
+DOUBLE(10.25e10) EOL
+DOUBLE(1.5e-3) EOL
+DOUBLE(2.0e4) EOL
+DOUBLE(42e5) EOL        # {celá časť}{exponent} bez bodky
+DOUBLE(1000.5001e10) EOL
+DOUBLE(1.5) EOL         # sufix 'd'
+DOUBLE(2.5) EOL         # sufix 'D'
+DOUBLE(0.25) EOL        # .25d
+DOUBLE(1000.0) EOL      # 1e3D
+EOF

@@ -1,0 +1,3 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 40
+# Špecifikácia sekcia 4 (subStr): Pre prázdny reťazec "" je strLength("") == 0, takže pri start == 0 platí start >= strLength(value) -> behová chyba 40!

@@ -1,0 +1,4 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 40
+# Špecifikácia sekcia 4 (subStr): "Program končí s běhovou chybou 40, nastane-li: start < 0"
+# Prekladač musí vygenerovať kontrolu (EXIT int@40), takže preklad skončí 0 a interpret skončí s návratovým kódom 40.

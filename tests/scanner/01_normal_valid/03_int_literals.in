@@ -1,0 +1,11 @@
+import ifj26.*
+
+@main def run(): Unit =
+  val a = 0
+  val b = 42
+  val c = 1000000
+  val d = 1_000_000
+  val e = 9_8_7_6_5
+  val f = -42
+  val g = -1_000
+  ()

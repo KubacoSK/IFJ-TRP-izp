@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+STDOUT: ten
+# Očakávaná syntaktická štruktúra (AST):
+# IfStmt(cond = BinaryOp(>, Id(x), Int(5)))
+# ├── thenBlock:
+# │   └── IfStmt(cond = BinaryOp(==, Id(x), Int(10)))
+# │       ├── thenBlock: [CallStmt(print, ["ten"])]
+# │       └── elseBlock: [CallStmt(print, ["other"])]
+# └── elseBlock:
+#     └── [CallStmt(print, ["small"])]

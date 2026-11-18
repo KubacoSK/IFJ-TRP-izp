@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Řetězcový literál typu String je ohraničen dvojitými uvozovkami '"' (ASCII 34) a nesmí obsahovat skutečný znak konce řádku."
+KW_VAL ID(s) ASSIGN LEXICAL_ERROR

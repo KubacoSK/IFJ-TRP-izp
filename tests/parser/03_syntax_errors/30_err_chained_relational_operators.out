@@ -1,0 +1,4 @@
+EXIT_CODE: 2
+# Špecifikácia sekcia 3: Relačné operátory '<, <=, >, >=' a '==, !=' sú v tabuľke priorít BEZ ASOCIATIVITY ("Řetězení relačních operátorů není povoleno").
+# V precedenčnej tabuľke je políčko medzi dvoma relačnými operátormi prázdne -> syntaktická chyba 2!
+SYNTAX_ERROR

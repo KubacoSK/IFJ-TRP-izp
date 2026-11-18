@@ -1,0 +1,7 @@
+EXIT_CODE: 0
+STDOUT: 9
+# Očakávané vyhodnotenie precedenčnej syntaktickej analýzy:
+# 1. a = (2 + (3 * 4)) - (10 / 2) = 9
+# 2. b = (-(2 + 3)) * (4 - 1) = -15
+# 3. s = "IFJ" + "26" = "IFJ26"
+# 4. Podmienka: (a + 1) <= (20 - 5) -> binárne '+' a '-' majú vyššiu prioritu (3) než '<=' (4)

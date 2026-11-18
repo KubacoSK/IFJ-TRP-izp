@@ -1,0 +1,10 @@
+EXIT_CODE: 0
+INTERPRET_EXIT_CODE: 0
+STDOUT:
+7.50 3.50 20.00 7.50 9.00
+# Čo sa testuje v generátore kódu (INT2FLOAT / INT2FLOATS):
+# Všetky situácie, kde musí prekladač vygenerovať konverziu Int -> Double:
+# - zmiešané binárne operácie (+, -, *, /, <, <=, >, >=, ==, !=),
+# - inicializácia 'var d: Double = 10' a priradenie 'd = 20',
+# - volanie funkcie s parametrom Double, ktorej odovzdáme Int ('addDouble(3, 4.5)'),
+# - návrat hodnoty Int z funkcie s návratovým typom Double ('return n').

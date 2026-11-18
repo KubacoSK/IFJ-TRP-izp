@@ -1,0 +1,3 @@
+EXIT_CODE: 1
+# Špecifikácia sekcia 1.1: "Nenulový literál nesmí začínat nulou." -> '0123' je lexikálna chyba 1.
+KW_VAL ID(x) ASSIGN LEXICAL_ERROR
