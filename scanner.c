@@ -425,7 +425,7 @@ static int scan_singleline_string(Token *token) {
     return ERROR_INTERNAL;
   int c;
   while ((c = get_char()) != '"') {
-    if (c == EOF || c == '\n' || (unsigned char)c < 32) {
+    if (c == EOF || c == '\n' || ((unsigned char)c < 32 && c != '\t')) {
       buf_free(&buf);
       return SCANNER_ERROR_LEX;
     }
@@ -467,6 +467,14 @@ static int scan_multiline_string(Token *token) {
   while ((c = get_char()) != EOF) {
     if (c == '"') {
       if (++quotes == 3) {
+        // Pri viac ako 3 uvodzovkach na konci patria zvysne do retazca
+        while ((c = get_char()) == '"')
+          if (!buf_add(&buf, '"')) {
+            buf_free(&buf);
+            return ERROR_INTERNAL;
+          }
+        if (c != EOF)
+          ungetc(c, source_file);
         token->type = TOKEN_TYPE_STRING;
         token->attribute.string = buf.data;
         return SCANNER_TOKEN_OK;
