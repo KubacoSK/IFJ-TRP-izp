@@ -240,16 +240,6 @@ Otvorené:
 - [ ] **POKUSNÉ ODOVZDANIE** do 19. novembra 2026 23:59:59.
 - [ ] **FINÁLNE ODOVZDANIE** do 27. novembra 2026 11:59:59.
 
-## Otázky na fórum
-
-1. Musí generovaný kód pretekať na 32 bitoch ako Scala? Vracia `readInt`
-   0 pre hodnoty mimo rozsahu Int?
-2. Boolean ako argument (`print(1 < 2)`): chyba 5 alebo 6? `a < b == c < d`:
-   chyba 2 alebo 6?
-3. Samostatný `return` vo funkcii s typom iným ako `Unit`: chyba 6 alebo 10?
-4. Smie premenná na najvyššej úrovni tela funkcie zatieniť parameter?
-5. Nezarovnaný DEDENT, zlé odsadenie v zátvorkách, tabulátor v reťazci:
-   chyba 1 alebo 2?
 
 ## Zoznam úloh
 
