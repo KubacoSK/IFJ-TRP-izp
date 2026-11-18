@@ -332,15 +332,9 @@ static void gen_str_length(void) {
   gen_emit("PUSHS LF@%%t1");
 }
 
-// readLine(): READ vracia riadok vratane LF, po EOF prazdny retazec
-static void gen_read_line(void) {
-  gen_emit("READ LF@%%t1 string");
-  gen_emit("PUSHS LF@%%t1");
-}
-
 // vstavane funkcie generovane ako knizicne funkcie $b$meno
-static const char *const lib_names[] = {"readInt", "readDouble", "ord",
-                                        "subStr"};
+static const char *const lib_names[] = {"readLine", "readInt", "readDouble",
+                                        "ord", "subStr"};
 
 void gen_builtin_call(const char *name, const DataType *arg_types,
                       size_t arg_count) {
@@ -354,8 +348,6 @@ void gen_builtin_call(const char *name, const DataType *arg_types,
     gen_emit("INT2CHARS"); // mimo 0-127 chyba 58 interpretu
   } else if (strcmp(name, "strLength") == 0) {
     gen_str_length();
-  } else if (strcmp(name, "readLine") == 0) {
-    gen_read_line();
   } else {
     for (size_t i = 0; i < sizeof(lib_names) / sizeof(lib_names[0]); i++) {
       if (strcmp(name, lib_names[i]) == 0) {
@@ -369,6 +361,18 @@ void gen_builtin_call(const char *name, const DataType *arg_types,
 
 // kniznica vstavanych funkcii, vypisuje sa vzdy cela (iba text, bez printf)
 static const char *const builtin_lib[] = {
+    // readLine(): vracia riadok vratane LF, po EOF prazdny retazec ""
+    "\nLABEL $b$readLine\n"
+    "CREATEFRAME\n"
+    "PUSHFRAME\n"
+    "DEFVAR LF@%t1\n"
+    "READ LF@%t1 string\n"
+    "JUMPIFNEQ $b$readLine$ok LF@%t1 nil@nil\n"
+    "MOVE LF@%t1 string@\n"
+    "LABEL $b$readLine$ok\n"
+    "PUSHS LF@%t1\n"
+    "POPFRAME\n"
+    "RETURN\n",
     // readInt(): pri EOF alebo chybnom vstupe 0 alebo prekroceni 32-bit rozsahu Int 
     "\nLABEL $b$readInt\n"
     "CREATEFRAME\n"
