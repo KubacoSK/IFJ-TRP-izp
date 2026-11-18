@@ -1707,6 +1707,7 @@ int parse_headers(Symtable *st) {
   if (res != SCANNER_TOKEN_OK)
     return res;
 
+  bool has_import = false;
   while (!check(TOKEN_TYPE_EOF)) {
     if (check(TOKEN_TYPE_EOL)) {
       res = next_token();
@@ -1717,6 +1718,9 @@ int parse_headers(Symtable *st) {
 
     // Preskocenie importov
     if (check_kw(KEYWORD_IMPORT)) {
+      if (has_import)
+        return ERROR_SYNTAX;
+      has_import = true;
       while (!check(TOKEN_TYPE_EOL) && !check(TOKEN_TYPE_EOF)) {
         res = next_token();
         if (res != SCANNER_TOKEN_OK)
@@ -1724,6 +1728,9 @@ int parse_headers(Symtable *st) {
       }
       continue;
     }
+
+    if (!has_import)
+      return ERROR_SYNTAX;
 
     // ak vidime @main, preskocime ho
     bool is_main = false;
