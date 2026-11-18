@@ -8,6 +8,8 @@
 #include "scanner.h"
 #include "error.h"
 #include <ctype.h>
+#include <errno.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -402,9 +404,15 @@ static int scan_number(Token *token, int first_char) {
   }
 
   token->type = is_double ? TOKEN_TYPE_DOUBLE_NUMBER : TOKEN_TYPE_INT_NUMBER;
-  if (is_double)
+  if (is_double) {
+    errno = 0;
     token->attribute.decimal = strtod(buf.data, NULL);
-  else
+    if (errno == ERANGE && (token->attribute.decimal == HUGE_VAL ||
+                            token->attribute.decimal == -HUGE_VAL)) {
+      buf_free(&buf);
+      return SCANNER_ERROR_LEX;
+    }
+  } else
     token->attribute.integer = (int64_t)strtoll(buf.data, NULL, 10);
   buf_free(&buf);
   return SCANNER_TOKEN_OK;
