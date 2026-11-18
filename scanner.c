@@ -8,6 +8,8 @@
 #include "scanner.h"
 #include "error.h"
 #include <ctype.h>
+#include <errno.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -402,9 +404,15 @@ static int scan_number(Token *token, int first_char) {
   }
 
   token->type = is_double ? TOKEN_TYPE_DOUBLE_NUMBER : TOKEN_TYPE_INT_NUMBER;
-  if (is_double)
+  if (is_double) {
+    errno = 0;
     token->attribute.decimal = strtod(buf.data, NULL);
-  else
+    if (errno == ERANGE && (token->attribute.decimal == HUGE_VAL ||
+                            token->attribute.decimal == -HUGE_VAL)) {
+      buf_free(&buf);
+      return SCANNER_ERROR_LEX;
+    }
+  } else
     token->attribute.integer = (int64_t)strtoll(buf.data, NULL, 10);
   buf_free(&buf);
   return SCANNER_TOKEN_OK;
@@ -417,7 +425,7 @@ static int scan_singleline_string(Token *token) {
     return ERROR_INTERNAL;
   int c;
   while ((c = get_char()) != '"') {
-    if (c == EOF || c == '\n' || (unsigned char)c < 32) {
+    if (c == EOF || c == '\n' || ((unsigned char)c < 32 && c != '\t')) {
       buf_free(&buf);
       return SCANNER_ERROR_LEX;
     }
@@ -459,6 +467,14 @@ static int scan_multiline_string(Token *token) {
   while ((c = get_char()) != EOF) {
     if (c == '"') {
       if (++quotes == 3) {
+        // Pri viac ako 3 uvodzovkach na konci patria zvysne do retazca
+        while ((c = get_char()) == '"')
+          if (!buf_add(&buf, '"')) {
+            buf_free(&buf);
+            return ERROR_INTERNAL;
+          }
+        if (c != EOF)
+          ungetc(c, source_file);
         token->type = TOKEN_TYPE_STRING;
         token->attribute.string = buf.data;
         return SCANNER_TOKEN_OK;

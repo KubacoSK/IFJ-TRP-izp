@@ -1243,7 +1243,8 @@ static int parse_block(Param *params, size_t param_count, StmtResult *out) {
   if (res != SCANNER_TOKEN_OK)
     return res;
 
-  symtable_push_scope(symtab);
+  if (!symtable_push_scope(symtab))
+    return ERROR_INTERNAL;
 
   // vlozenie parametrov do lokalneho scope
   if (params != NULL) {
@@ -1597,7 +1598,10 @@ static int parse_function(bool is_main) {
   // inak to je jednoriadkova funkcia
   else {
     // vytvorime scope pre telo jednoriadkovej funkcie
-    symtable_push_scope(symtab);
+    if (!symtable_push_scope(symtab)) {
+      free_params(temp_params, param_count);
+      return ERROR_INTERNAL;
+    }
 
     // vlozenie parametrov do tohto scope
     for (size_t i = 0; i < param_count; i++) {
@@ -1707,6 +1711,7 @@ int parse_headers(Symtable *st) {
   if (res != SCANNER_TOKEN_OK)
     return res;
 
+  bool has_import = false;
   while (!check(TOKEN_TYPE_EOF)) {
     if (check(TOKEN_TYPE_EOL)) {
       res = next_token();
@@ -1717,6 +1722,9 @@ int parse_headers(Symtable *st) {
 
     // Preskocenie importov
     if (check_kw(KEYWORD_IMPORT)) {
+      if (has_import)
+        return ERROR_SYNTAX;
+      has_import = true;
       while (!check(TOKEN_TYPE_EOL) && !check(TOKEN_TYPE_EOF)) {
         res = next_token();
         if (res != SCANNER_TOKEN_OK)
@@ -1724,6 +1732,9 @@ int parse_headers(Symtable *st) {
       }
       continue;
     }
+
+    if (!has_import)
+      return ERROR_SYNTAX;
 
     // ak vidime @main, preskocime ho
     bool is_main = false;
@@ -1747,6 +1758,9 @@ int parse_headers(Symtable *st) {
         return ERROR_SYNTAX;
 
       char *func_name = str_dup(current_tok.attribute.string);
+      // kontrola alokacie nazvu funkcie
+      if (!func_name)
+        return ERROR_INTERNAL;
       res = next_token();
       if (res != SCANNER_TOKEN_OK) {
         free(func_name);
