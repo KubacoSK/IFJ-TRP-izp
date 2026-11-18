@@ -15,14 +15,17 @@ hashtable.o: hashtable.c hashtable.h utils.h
 symtable.o: symtable.c symtable.h hashtable.h utils.h
 	$(CC) $(CFLAGS) -c symtable.c -o symtable.o
 
-parser.o: parser.c parser.h scanner.h symtable.h error.h
+codegen.o: codegen.c codegen.h scanner.h symtable.h hashtable.h error.h utils.h
+	$(CC) $(CFLAGS) -c codegen.c -o codegen.o
+
+parser.o: parser.c parser.h scanner.h symtable.h codegen.h error.h
 	$(CC) $(CFLAGS) -c parser.c -o parser.o
 
-main.o: main.c parser.h symtable.h scanner.h error.h
+main.o: main.c parser.h symtable.h scanner.h codegen.h error.h
 	$(CC) $(CFLAGS) -c main.c -o main.o
 
-ifj26: main.o parser.o scanner.o symtable.o hashtable.o utils.o
-	$(CC) $(CFLAGS) main.o parser.o scanner.o symtable.o hashtable.o utils.o -o ifj26
+ifj26: main.o parser.o codegen.o scanner.o symtable.o hashtable.o utils.o
+	$(CC) $(CFLAGS) main.o parser.o codegen.o scanner.o symtable.o hashtable.o utils.o -o ifj26
 
 test_scanner: scanner.o tests/test_scanner.c
 	$(CC) $(CFLAGS) scanner.o tests/test_scanner.c -o test_scanner_runner
@@ -41,11 +44,15 @@ test_symtable: utils.o hashtable.o symtable.o tests/test_symtable.c
 
 test: test_scanner test_ht test_symtable
 
-check: test
-	
+# end-to-end testy prekladaca, potrebuju interpret ic26int (IC26INT=...)
+test_e2e: ifj26
+	bash tests/e2e.sh
+
+check: test test_e2e
+
 build-check: all check
 
 clean:
 	rm -f *.o ifj26 test_runner test_scanner_runner test_ht_runner test_symtable_runner
 
-.PHONY: all test test_scanner test_ht test_symtable check build-check clean
+.PHONY: all test test_scanner test_ht test_symtable test_e2e check build-check clean

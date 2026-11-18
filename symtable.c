@@ -33,6 +33,7 @@ static void free_symbol(void *ptr) {
 void symtable_init(Symtable *st) {
   if (!st)
     return;
+  st->next_var_id = 1;
   ht_init(&st->global_table);
   st->current_scope = NULL;
 }
@@ -86,6 +87,7 @@ Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
     free(sym);
     return NULL;
   }
+  sym->data.var.id = st->next_var_id++;
   sym->kind = SYM_VARIABLE;
   sym->data.var.type = type;
   sym->data.var.is_constant = is_constant;

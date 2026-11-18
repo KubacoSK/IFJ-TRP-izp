@@ -37,6 +37,7 @@ typedef struct {
 
 // Data premennej
 typedef struct {
+  unsigned id; // jedinecne cislo pre premenovanie v generatore
   DataType type;       // Datovy typ premennej
   bool is_constant;    // True pre val (nemennu), false pre var (menitelnu)
   bool is_initialized; // Priznak inicializacie premennej
@@ -69,6 +70,7 @@ typedef struct Scope {
 
 // Hlavna struktura tabulky symbolov prekladaca
 typedef struct {
+  unsigned next_var_id; // pocitadlo ID premennych
   HashTable global_table; // Globalna tabulka funkcii
   Scope *current_scope;   // Aktualny lokalny ramec premennych
 } Symtable;

@@ -5,6 +5,7 @@
  * @brief Vstupny bod prekladaca IFJ26.
  */
 
+#include "codegen.h"
 #include "error.h"
 #include "parser.h"
 #include "scanner.h"
@@ -30,8 +31,13 @@ int main(void) {
     // druhy priechod - plna analyza tela funkcii nad polom tokenov
     result = parse_program(&st);
   }
+  
+  if (result == ERROR_OK) {
+    result = gen_write(stdout);
+  }
 
   // Uvolnenie zdrojov
+  gen_free();
   parser_free();
   symtable_free(&st);
 
