@@ -369,14 +369,20 @@ void gen_builtin_call(const char *name, const DataType *arg_types,
 
 // kniznica vstavanych funkcii, vypisuje sa vzdy cela (iba text, bez printf)
 static const char *const builtin_lib[] = {
-    // readInt(): pri EOF alebo chybnom vstupe 0
+    // readInt(): pri EOF alebo chybnom vstupe 0 alebo prekroceni 32-bit rozsahu Int 
     "\nLABEL $b$readInt\n"
     "CREATEFRAME\n"
     "PUSHFRAME\n"
     "DEFVAR LF@%t1\n"
     "DEFVAR LF@%t2\n"
     "READ LF@%t1 int\n"
-    "JUMPIFNEQ $b$readInt$ok LF@%t1 nil@nil\n"
+    "JUMPIFEQ $b$readInt$zero LF@%t1 nil@nil\n"
+    "GT LF@%t2 LF@%t1 int@2147483647\n"
+    "JUMPIFEQ $b$readInt$zero LF@%t2 bool@true\n"
+    "LT LF@%t2 LF@%t1 int@-2147483648\n"
+    "JUMPIFEQ $b$readInt$zero LF@%t2 bool@true\n"
+    "JUMP $b$readInt$ok\n"
+    "LABEL $b$readInt$zero\n"
     "MOVE LF@%t1 int@0\n"
     "LABEL $b$readInt$ok\n"
     "PUSHS LF@%t1\n"
