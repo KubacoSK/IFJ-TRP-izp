@@ -31,7 +31,7 @@ int main(void) {
     // druhy priechod - plna analyza tela funkcii nad polom tokenov
     result = parse_program(&st);
   }
-  
+
   if (result == ERROR_OK) {
     result = gen_write(stdout);
   }
