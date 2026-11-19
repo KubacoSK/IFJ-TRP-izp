@@ -85,13 +85,31 @@ bool ht_delete(HashTable *table, unsigned char *key) {
       }
 
       if (table->items[ind].state == HT_SLOT_OCCUPIED && strcmp((char *)table->items[ind].key, (char *)key) == 0) {
+        free(table->items[ind].key);
         table->items[ind].key = NULL;
-            table->items[ind].value = NULL;
-            table->items[ind].state = HT_SLOT_DELETED;
-            table->count--;
-            return true;
+        table->items[ind].value = NULL;
+        table->items[ind].state = HT_SLOT_DELETED;
+        table->count--;
+        return true;
       }
       ind = (ind + step) % HT_CAPACITY;
     }
     return false;
 }    
+
+// vycistenie celej tabulky a uvolnenie pamate
+void ht_clear(HashTable *table, free_func_t free_val) {
+    for (int i = 0; i < HT_CAPACITY; i++) { // prejdeme vsetky sloty
+        if (table->items[i].state == HT_SLOT_OCCUPIED) { // uvolnujeme len obsadene sloty
+            free(table->items[i].key); // uvolnime alokovany kluc
+            table->items[i].key = NULL;
+
+            if (free_val != NULL && table->items[i].value != NULL) { // ak mame funkciu na uvolnenie hodnoty
+                free_val(table->items[i].value);
+            }
+            table->items[i].value = NULL;
+        }
+        table->items[i].state = HT_SLOT_EMPTY; // vyresetujeme stav slotu na prazdny
+    }
+    table->count = 0; // vynulujeme pocitadlo
+}

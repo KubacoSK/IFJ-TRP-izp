@@ -24,9 +24,12 @@ typedef struct { // cela tabulka
   int count; // pocitadlo na kolko je tabulka plna
 }HashTable;
 
+typedef void (*free_func_t)(void *); // funkcia na uvolnenie hodnoty
+
 unsigned long ht_hash(unsigned char *str);
 void ht_init(HashTable *table);
 HTItem* ht_search(HashTable *table, unsigned char *key);
 bool ht_insert(HashTable *table, unsigned char *key, void *value);
 bool ht_delete(HashTable *table, unsigned char *key);
+void ht_clear(HashTable *table, free_func_t free_val);
 #endif

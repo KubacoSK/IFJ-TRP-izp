@@ -93,7 +93,7 @@ Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
   sym->data.var.is_constant = is_constant;
   sym->data.var.is_initialized = is_initialized;
 
-  if (!ht_insert(&st->current_scope->table, name, sym)) {
+  if (!ht_insert(&st->current_scope->table, (unsigned char *)name, sym)) {
     free_symbol(sym);
     return NULL;
   }
@@ -104,7 +104,7 @@ Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
 Symbol *symtable_find_var_current_scope(const Symtable *st, const char *name) {
   if (!st || !st->current_scope || !name)
     return NULL;
-  HTItem *item = ht_search(&st->current_scope->table, name);
+  HTItem *item = ht_search(&st->current_scope->table, (unsigned char *)name);
   return item ? (Symbol *)item->value : NULL;
 }
 
@@ -114,7 +114,7 @@ Symbol *symtable_find_var(const Symtable *st, const char *name) {
   if (!st || !name)
     return NULL;
   for (Scope *sc = st->current_scope; sc != NULL; sc = sc->parent) {
-    HTItem *item = ht_search(&sc->table, name);
+    HTItem *item = ht_search(&sc->table, (unsigned char *)name);
     if (item) {
       return (Symbol *)item->value;
     }
@@ -157,7 +157,7 @@ Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,
     }
   }
 
-  if (!ht_insert(&st->global_table, name, sym)) {
+  if (!ht_insert(&st->global_table, (unsigned char *)name, sym)) {
     free_symbol(sym);
     return NULL;
   }
@@ -168,7 +168,7 @@ Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,
 Symbol *symtable_find_func(const Symtable *st, const char *name) {
   if (!st || !name)
     return NULL;
-  HTItem *item = ht_search(&st->global_table, name);
+  HTItem *item = ht_search((HashTable *)&st->global_table, (unsigned char *)name);
   return item ? (Symbol *)item->value : NULL;
 }
 
