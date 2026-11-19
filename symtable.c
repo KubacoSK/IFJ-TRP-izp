@@ -16,8 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
 // Lokalny ramec (scope) pre premenne
 struct Scope {
   HashTable table;      // Tabulka symbolov pre dany ramec

@@ -66,7 +66,6 @@ typedef struct {
   } data;
 } Symbol;
 
-
 // Lokalny ramec (scope) pre premenne, vnutorna struktura je v symtable.c
 typedef struct Scope Scope;
 
