@@ -16,7 +16,7 @@ typedef enum { // stavy pre sloty
 typedef struct { // Struktura pre vytvorenie celej hash tabulky
   char *key; // Kluc, teda nejaky indetifikator my mam djb2 alg.  
   void *value; // hodnota, teda premena co davame do tabulky
-  HTslot slot; // v akom stave je slot prazdny, obsadeny, vymazany
+  HTslot state; // v akom stave je slot prazdny, obsadeny, vymazany
 }HTItem;
 
 typedef struct { // cela tabulka
@@ -28,4 +28,5 @@ unsigned long ht_hash(unsigned char *str);
 void ht_init(HashTable *table);
 HTItem* ht_search(HashTable *table, unsigned char *key);
 bool ht_insert(HashTable *table, unsigned char *key, void *value);
+bool ht_delete(HashTable *table, unsigned char *key);
 #endif
