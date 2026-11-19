@@ -11,9 +11,23 @@
  */
 
 #include "symtable.h"
+#include "hashtable.h"
 #include "utils.h"
 #include <stdlib.h>
 #include <string.h>
+
+// Lokalny ramec (scope) pre premenne
+struct Scope {
+  HashTable table;      // Tabulka symbolov pre dany ramec
+  struct Scope *parent; // Ukazovatel na nadradeny ramec
+};
+
+// Hlavna struktura tabulky symbolov prekladaca
+struct Symtable {
+  unsigned next_var_id;   // pocitadlo ID premennych
+  HashTable global_table; // Globalna tabulka funkcii
+  Scope *current_scope;   // Aktualny lokalny ramec premennych
+};
 
 // Uvolnenie pamate alokovaneho symbolu a jeho parametrov
 static void free_symbol(void *ptr) {
@@ -34,16 +48,18 @@ static void free_symbol(void *ptr) {
   free(sym);
 }
 
-// Inicializacia prazdnej tabulky symbolov
-void symtable_init(Symtable *st) {
+// Vytvorenie prazdnej tabulky symbolov
+Symtable *symtable_create(void) {
+  Symtable *st = (Symtable *)malloc(sizeof(Symtable));
   if (!st)
-    return;
+    return NULL;
   st->next_var_id = 1;
   ht_init(&st->global_table);
   st->current_scope = NULL;
+  return st;
 }
 
-// Uvolnenie vsetkych zdrojov tabulky symbolov
+// Uvolnenie vsetkych zdrojov tabulky symbolov aj samotnej tabulky
 void symtable_free(Symtable *st) {
   if (!st)
     return;
@@ -51,6 +67,7 @@ void symtable_free(Symtable *st) {
     symtable_pop_scope(st);
   }
   ht_clear(&st->global_table, free_symbol);
+  free(st);
 }
 
 // Vytvorenie a otvorenie noveho lokalneho ramca
@@ -75,6 +92,20 @@ void symtable_pop_scope(Symtable *st) {
   st->current_scope = top->parent;
   ht_clear(&top->table, free_symbol);
   free(top);
+}
+
+// Odpojenie lokalnych ramcov (napr. pri analyze inej funkcie)
+Scope *symtable_detach_scopes(Symtable *st) {
+  Scope *saved = st->current_scope;
+  st->current_scope = NULL;
+  return saved;
+}
+
+// Obnova odpojenych ramcov, zvysne otvorene ramce sa uvolnia
+void symtable_restore_scopes(Symtable *st, Scope *saved) {
+  while (st->current_scope)
+    symtable_pop_scope(st);
+  st->current_scope = saved;
 }
 
 // Pridanie premennej do aktualneho lokalneho ramca

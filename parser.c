@@ -345,15 +345,14 @@ static int analyze_on_demand(int idx) {
   bool saved_type = current_func_explicit_type;
   bool saved_semi = after_semicolon;
 
-  // volana funkcia nevidi lokalne premenne volajuceho
-  Scope *saved_scope = symtab->current_scope;
-  symtab->current_scope = NULL;
+  //  odpojenie lokalnych ramcov
+  Scope *saved_scope = symtable_detach_scopes(symtab);
 
   pos = funcs[idx].def_pos;
   int res = analyze_function(idx);
 
   // obnova stavu
-  symtab->current_scope = saved_scope;
+  symtable_restore_scopes(symtab, saved_scope);
   pos = saved_pos;
   current_func_return_type = saved_ret;
   current_func_explicit_unit = saved_unit;
