@@ -27,4 +27,5 @@ typedef struct { // cela tabulka
 unsigned long ht_hash(unsigned char *str);
 void ht_init(HashTable *table);
 HTItem* ht_search(HashTable *table, unsigned char *key);
+bool ht_insert(HashTable *table, unsigned char *key, void *value);
 #endif

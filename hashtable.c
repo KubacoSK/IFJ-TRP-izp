@@ -28,7 +28,7 @@ void ht_init(HashTable *table){
   }
 }
 
-HTitem* ht_search(HashTable *table, unsigned char *key) {
+HTItem* ht_search(HashTable *table, unsigned char *key) {
   unsigned long hash = ht_hash(key);
     int ind = hash % HT_CAPACITY;
     int step = (hash % (HT_CAPACITY - 1)) + 1;
@@ -42,5 +42,32 @@ HTitem* ht_search(HashTable *table, unsigned char *key) {
         ind = (ind + step) % HT_CAPACITY;
     }
     return NULL;
-  
+}
+
+bool ht_insert(HashTable *table, unsigned char *key, void *value) {
+  HTItem *found = ht_search(table, key);
+    if (found != NULL) {
+        found->value = value;
+        return true;
+    }
+    if (table->count >= HT_CAPACITY) {
+        return false;
+    }
+    unsigned long hash = ht_hash(key);
+    int ind = hash % HT_CAPACITY;
+    int step = (hash % (HT_CAPACITY - 1)) + 1;
+    for (int i = 0; i < HT_CAPACITY; i++) {
+        if (table->items[ind].slot == HT_SLOT_EMPTY || table->items[ind].slot == HT_SLOT_DELETED) {
+            char *kcopy = malloc(strlen((char *)key) + 1);
+            if (!kcopy) return false;
+            strcpy(kcopy, (char *)key);
+            table->items[ind].key = kcopy;
+            table->items[ind].value = value;
+            table->items[ind].slot = HT_SLOT_OCCUPIED;
+            table->count++;
+            return true;
+        }
+        ind = (ind + step) % HT_CAPACITY;
+    }
+    return false; 
 }
