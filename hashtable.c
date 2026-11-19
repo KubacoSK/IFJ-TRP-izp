@@ -2,6 +2,7 @@
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
  *
  * @file hashtable.c
+ * @brief Implementacia hashovacej tabulky.
  */
 
 #include "hashtable.h"
