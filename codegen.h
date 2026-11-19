@@ -1,7 +1,11 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
- *
- * @file codegen.c
+ * Autori:
+  * @author xodrasa00, Aleš Odráška
+  * @author xgazdaa00, Adam Gazdarica
+  * @author xkrpeld00, Dominik Krpelan
+  * @author xpetraj00, Jakub Petrán
+ * @file codegen.h
  * @brief Generator cieloveho kodu IFJcode26.
  *
  */
