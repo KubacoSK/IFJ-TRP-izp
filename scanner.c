@@ -1,6 +1,10 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
- *
+ * Autori:
+  * @author xodrasa00, Aleš Odráška
+  * @author xgazdaa00, Adam Gazdarica
+  * @author xkrpeld00, Dominik Krpelan
+  * @author xpetraj00, Jakub Petrán
  * @file scanner.c
  * @brief Lexikalny analyzator pre jazyk IFJ26 (podmnozina jazyka Scala 3).
  */

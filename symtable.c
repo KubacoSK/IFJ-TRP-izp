@@ -1,6 +1,11 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
- *
+ * Autori:
+  * @author xodrasa00, Aleš Odráška
+  * @author xgazdaa00, Adam Gazdarica
+  * @author xkrpeld00, Dominik Krpelan
+  * @author xpetraj00, Jakub Petrán
+ * 
  * @file symtable.c
  * @brief Implementacia tabulky symbolov (Symtable) pre jazyk IFJ26.
  */
@@ -173,7 +178,8 @@ Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,
 Symbol *symtable_find_func(const Symtable *st, const char *name) {
   if (!st || !name)
     return NULL;
-  HTItem *item = ht_search((HashTable *)&st->global_table, (unsigned char *)name);
+  HTItem *item =
+      ht_search((HashTable *)&st->global_table, (unsigned char *)name);
   return item ? (Symbol *)item->value : NULL;
 }
 

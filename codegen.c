@@ -1,6 +1,10 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
- *
+ * Autori:
+  * @author xodrasa00, Aleš Odráška
+  * @author xgazdaa00, Adam Gazdarica
+  * @author xkrpeld00, Dominik Krpelan
+  * @author xpetraj00, Jakub Petrán
  * @file codegen.c
  * @brief Generator cieloveho kodu IFJcode26.
  *
@@ -31,9 +35,9 @@ typedef struct {
 
 static FuncCode *funcs = NULL; // indexy rovnake ako v parseri
 static size_t func_cap = 0;
-static int current = -1;       // aktualna funkcia
-static int main_idx = -1;      // funkcia s @main
-static bool gen_error = false; // chyba alokacie pocas generovania
+static int current = -1;         // aktualna funkcia
+static int main_idx = -1;        // funkcia s @main
+static bool gen_error = false;   // chyba alokacie pocas generovania
 static unsigned label_count = 0; // pocitadlo navesti if/while
 
 // pridanie formatovaneho riadku do bufferu
@@ -111,9 +115,7 @@ void gen_function_end(void) {
 
 void gen_call(const char *name) { gen_emit("CALL $f$%s", name); }
 
-void gen_select(int idx) {
-  current = ((size_t)idx < func_cap) ? idx : -1;
-}
+void gen_select(int idx) { current = ((size_t)idx < func_cap) ? idx : -1; }
 
 void gen_def(const char *fmt, ...) {
   if (current < 0)
@@ -373,7 +375,8 @@ static const char *const builtin_lib[] = {
     "PUSHS LF@%t1\n"
     "POPFRAME\n"
     "RETURN\n",
-    // readInt(): pri EOF alebo chybnom vstupe 0 alebo prekroceni 32-bit rozsahu Int 
+    // readInt(): pri EOF alebo chybnom vstupe 0 alebo prekroceni 32-bit rozsahu
+    // Int
     "\nLABEL $b$readInt\n"
     "CREATEFRAME\n"
     "PUSHFRAME\n"

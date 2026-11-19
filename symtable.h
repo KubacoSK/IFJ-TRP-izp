@@ -1,6 +1,11 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
- *
+ * Autori:
+  * @author xodrasa00, Aleš Odráška
+  * @author xgazdaa00, Adam Gazdarica
+  * @author xkrpeld00, Dominik Krpelan
+  * @author xpetraj00, Jakub Petrán
+ * 
  * @file symtable.h
  * @brief Abstraktny datovy typ (ADT) tabulky symbolov pre jazyk IFJ26.
  */
@@ -37,7 +42,7 @@ typedef struct {
 
 // Data premennej
 typedef struct {
-  unsigned id; // jedinecne cislo pre premenovanie v generatore
+  unsigned id;         // jedinecne cislo pre premenovanie v generatore
   DataType type;       // Datovy typ premennej
   bool is_constant;    // True pre val (nemennu), false pre var (menitelnu)
   bool is_initialized; // Priznak inicializacie premennej
@@ -70,7 +75,7 @@ typedef struct Scope {
 
 // Hlavna struktura tabulky symbolov prekladaca
 typedef struct {
-  unsigned next_var_id; // pocitadlo ID premennych
+  unsigned next_var_id;   // pocitadlo ID premennych
   HashTable global_table; // Globalna tabulka funkcii
   Scope *current_scope;   // Aktualny lokalny ramec premennych
 } Symtable;
