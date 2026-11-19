@@ -13,7 +13,6 @@
 #ifndef _SYMTABLE_H
 #define _SYMTABLE_H
 
-#include "hashtable.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -67,23 +66,17 @@ typedef struct {
   } data;
 } Symbol;
 
-// Lokalny ramec (scope) pre premenne
-typedef struct Scope {
-  HashTable table;      // Tabulka symbolov pre dany ramec
-  struct Scope *parent; // Ukazovatel na nadradeny ramec
-} Scope;
 
-// Hlavna struktura tabulky symbolov prekladaca
-typedef struct {
-  unsigned next_var_id;   // pocitadlo ID premennych
-  HashTable global_table; // Globalna tabulka funkcii
-  Scope *current_scope;   // Aktualny lokalny ramec premennych
-} Symtable;
+// Lokalny ramec (scope) pre premenne, vnutorna struktura je v symtable.c
+typedef struct Scope Scope;
 
-// Inicializacia prazdnej tabulky symbolov
-void symtable_init(Symtable *st);
+// Tabulka symbolov prekladaca, vnutorna struktura je v symtable.c
+typedef struct Symtable Symtable;
 
-// Uvolnenie celej tabulky symbolov a vsetkych ramcov
+// Vytvorenie prazdnej tabulky symbolov, pri zlyhani alokacie vrati NULL
+Symtable *symtable_create(void);
+
+// Uvolnenie celej tabulky symbolov, vsetkych ramcov aj samotnej tabulky
 void symtable_free(Symtable *st);
 
 // Otvorenie noveho lokalneho ramca pri vstupe do bloku
@@ -91,6 +84,14 @@ bool symtable_push_scope(Symtable *st);
 
 // Uzatvorenie aktualneho lokalneho ramca pri opusteni bloku
 void symtable_pop_scope(Symtable *st);
+
+// Odpojenie vsetkych lokalnych ramcov, vrati ich na neskorsiu obnovu
+// Po volani nie je viditelna ziadna lokalna premenna (iba funkcie)
+Scope *symtable_detach_scopes(Symtable *st);
+
+// Obnova ramcov odpojenych cez symtable_detach_scopes. Ramce, ktore medzitym
+// ostali otvorene, sa uvolnia
+void symtable_restore_scopes(Symtable *st, Scope *saved);
 
 // Pridanie premennej do aktualneho ramca
 Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,

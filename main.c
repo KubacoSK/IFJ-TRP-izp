@@ -21,19 +21,20 @@ int main(void) {
   // scanner cita priamo stdin, tokeny drzi parser v pamati
   set_source_file(stdin);
 
-  // Inicializacia tabulky symbolov
-  Symtable st;
-  symtable_init(&st);
+  // Vytvorenie tabulky symbolov
+  Symtable *st = symtable_create();
+  if (!st)
+    return ERROR_INTERNAL;
 
   // Pridanie vstavanych funkcii
-  symtable_add_builtins(&st);
+  symtable_add_builtins(st);
 
   // prvy priechod - nacitanie tokenov a zber hlaviciek funkcii
-  int result = parse_headers(&st);
+  int result = parse_headers(st);
 
   if (result == ERROR_OK) {
     // druhy priechod - plna analyza tela funkcii nad polom tokenov
-    result = parse_program(&st);
+    result = parse_program(st);
   }
 
   if (result == ERROR_OK) {
@@ -43,7 +44,7 @@ int main(void) {
   // Uvolnenie zdrojov
   gen_free();
   parser_free();
-  symtable_free(&st);
+  symtable_free(st);
 
   return result;
 }
