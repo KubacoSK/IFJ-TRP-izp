@@ -1,11 +1,11 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
  * Autori:
-  * @author xodrasa00, Aleš Odráška
-  * @author xgazdaa00, Adam Gazdarica
-  * @author xkrpeld00, Dominik Krpelan
-  * @author xpetraj00, Jakub Petrán
- * 
+ * @author xodrasa00, Aleš Odráška
+ * @author xgazdaa00, Adam Gazdarica
+ * @author xkrpeld00, Dominik Krpelan
+ * @author xpetraj00, Jakub Petrán
+ *
  * @file symtable.c
  * @brief Implementacia tabulky symbolov (Symtable) pre jazyk IFJ26.
  */

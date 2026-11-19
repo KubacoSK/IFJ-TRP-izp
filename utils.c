@@ -1,10 +1,10 @@
 /**
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
  * Autori:
-  * @author xodrasa00, Aleš Odráška
-  * @author xgazdaa00, Adam Gazdarica
-  * @author xkrpeld00, Dominik Krpelan
-  * @author xpetraj00, Jakub Petrán
+ * @author xodrasa00, Aleš Odráška
+ * @author xgazdaa00, Adam Gazdarica
+ * @author xkrpeld00, Dominik Krpelan
+ * @author xpetraj00, Jakub Petrán
  * @file utils.c
  * @brief Implementacia pomocnych funkcii pre prekladac IFJ26.
  */
