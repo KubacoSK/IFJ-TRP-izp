@@ -20,20 +20,20 @@
 
 // Terminaly precedencnej tabulky (poradie riadkov a stlpcov tabulky)
 typedef enum {
-  PREC_I,      
-  PREC_PLUS,  
-  PREC_MINUS,  
-  PREC_MUL,    
-  PREC_DIV,    
-  PREC_LT,     
-  PREC_LEQ,    
-  PREC_GT,     
-  PREC_GEQ,    
-  PREC_EQ,     
-  PREC_NEQ,    
-  PREC_LPAREN, 
-  PREC_RPAREN, 
-  PREC_UNARY,  
+  PREC_I,
+  PREC_PLUS,
+  PREC_MINUS,
+  PREC_MUL,
+  PREC_DIV,
+  PREC_LT,
+  PREC_LEQ,
+  PREC_GT,
+  PREC_GEQ,
+  PREC_EQ,
+  PREC_NEQ,
+  PREC_LPAREN,
+  PREC_RPAREN,
+  PREC_UNARY,
   PREC_DOLLAR,
   PREC_COUNT
 } PrecSymbol;
@@ -319,7 +319,6 @@ static int analyze_function(int idx) {
   current_func = idx;
   funcs[idx].state = FUNC_IN_PROGRESS;
 
-
   gen_function_begin(idx, funcs[idx].sym->name, funcs[idx].is_main);
 
   int res = parse_function(funcs[idx].is_main);
@@ -478,26 +477,22 @@ static int reduce_operation(TokenType op, DataType left, DataType right,
 }
 
 // druh polozky na zasobniku
-typedef enum {
-  ITEM_TERM,    
-  ITEM_NONTERM, 
-  ITEM_HANDLE   
-} ItemKind;
+typedef enum { ITEM_TERM, ITEM_NONTERM, ITEM_HANDLE } ItemKind;
 
 // polozka precedencnej analyzy
 typedef struct {
   ItemKind kind;
-  PrecSymbol sym;   
-  TokenType op;     
-  DataType type;    
-  size_t tok_index; 
-  bool is_call;       
+  PrecSymbol sym;
+  TokenType op;
+  DataType type;
+  size_t tok_index;
+  bool is_call;
 } ExprItem;
 
 // zasobnik precedencnej analyzy
 typedef struct {
   ExprItem *items;
-  size_t top; 
+  size_t top;
   size_t cap;
 } ExprStack;
 
@@ -625,11 +620,11 @@ static int parse_call(DataType *out_type) {
 
       // bool sa neda predat
       if (arg_type == TYPE_BOOL)
-        return ERROR_SEM_TYPE; 
+        return ERROR_SEM_TYPE;
 
       // prilis vela argumentov
       if (arg_count >= func->data.func.param_count)
-        return ERROR_SEM_PARAM; 
+        return ERROR_SEM_PARAM;
 
       // typ argumentu, povolena konverzia Int -> Double
       DataType expected = func->data.func.params[arg_count].type;
@@ -715,7 +710,8 @@ static int reduce_operand(const ExprItem *i, DataType *out_type) {
   return SCANNER_TOKEN_OK;
 }
 
-// Redukcia - vyberie <y z vrchu zasobnika, najde pravidlo E -> y a vykona semtaticku akciu
+// Redukcia - vyberie <y z vrchu zasobnika, najde pravidlo E -> y a vykona
+// semtaticku akciu
 static int reduce_rule(ExprStack *s) {
   size_t h = s->top;
   while (h > 0 && s->items[h - 1].kind != ITEM_HANDLE)
@@ -734,12 +730,12 @@ static int reduce_rule(ExprStack *s) {
   } else if (len == 2 && is_term(&y[0], PREC_UNARY) &&
              y[1].kind == ITEM_NONTERM) {
     // E -> u E, iba pre cisla
-    if(y[1].type != TYPE_INT && y[1].type != TYPE_DOUBLE)
+    if (y[1].type != TYPE_INT && y[1].type != TYPE_DOUBLE)
       return ERROR_SEM_TYPE;
     result.type = y[1].type;
     gen_unary(y[0].op, y[1].type);
 
-    } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
+  } else if (len == 2 && is_term(&y[0], PREC_LPAREN) &&
              is_term(&y[1], PREC_RPAREN)) {
     result.type = TYPE_UNIT;
     gen_push_unit();
@@ -768,9 +764,9 @@ static int reduce_rule(ExprStack *s) {
 #ifdef PREC_DEBUG
 // ladiaci vypis zasobnika na stderr (make CFLAGS+=-DPREC_DEBUG)
 static void debug_stack(const ExprStack *s, PrecSymbol b, char action) {
-  static const char *names[PREC_COUNT] = {"i",  "+",  "-", "*",  "/",
-                                          "<",  "<=", ">", ">=", "==",
-                                          "!=", "(",  ")", "u",  "$"};
+  static const char *names[PREC_COUNT] = {
+      "i",  "+",  "-",  "*", "/", "<", "<=", ">",
+      ">=", "==", "!=", "(", ")", "u", "$"};
   for (size_t i = 0; i < s->top; i++) {
     const ExprItem *it = &s->items[i];
     if (it->kind == ITEM_HANDLE)
@@ -814,9 +810,9 @@ static int parse_expression_inner(ExprStack *s, DataType *out_type) {
     PrecSymbol a = s->items[a_idx].sym;
     char action = prec_table[a][b];
 
-    #ifdef PREC_DEBUG
+#ifdef PREC_DEBUG
     debug_stack(s, b, action);
-    #endif
+#endif
 
     if (action == '=' || action == '<') {
       if (action == '<') {

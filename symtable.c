@@ -173,7 +173,8 @@ Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,
 Symbol *symtable_find_func(const Symtable *st, const char *name) {
   if (!st || !name)
     return NULL;
-  HTItem *item = ht_search((HashTable *)&st->global_table, (unsigned char *)name);
+  HTItem *item =
+      ht_search((HashTable *)&st->global_table, (unsigned char *)name);
   return item ? (Symbol *)item->value : NULL;
 }
 
