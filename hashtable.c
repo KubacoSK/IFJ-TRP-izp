@@ -2,144 +2,115 @@
  * Project: Implementation of a Compiler for the Imperative Language IFJ26.
  *
  * @file hashtable.c
- * @brief Implementacia rozptylovacej tabulky s otvorenou adresaciou (TRP-izp).
+ * @brief Implementacia hashovacej tabulky.
  */
 
 #include "hashtable.h"
-#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 
-// Hashovacia funkcia djb2
-size_t ht_hash(const char *key) {
-  size_t hash = 5381;
-  int c;
-  while ((c = (unsigned char)*key++)) {
-    hash = ((hash << 5) + hash) + (size_t)c; /* hash * 33 + c */
-  }
-  return hash;
+// hash funkcia 
+unsigned long ht_hash(unsigned char* str) {
+    unsigned long hash = 5381; // incializacia 5831
+    int c = 0;
+    while(( c = *str++))
+
+      hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    return hash;
 }
 
-void ht_init(HashTable *table) {
-  if (!table)
-    return;
+// inicializacia hash tabulky
+void ht_init(HashTable *table){
   table->count = 0;
-  for (size_t i = 0; i < HT_CAPACITY; i++) {
-    table->items[i].key = NULL;
-    table->items[i].value = NULL;
-    table->items[i].state = HT_SLOT_EMPTY;
+  for (int i = 0; i < HT_CAPACITY; i++) { // prechadzame cez vsetky podla kapacity
+    table->items[i].key = NULL; // nastvanie kluca
+    table->items[i].value = NULL; // nastavenie hodnoty
+    table->items[i].state = HT_SLOT_EMPTY; // nastavenie slotu
   }
 }
 
-HTItem *ht_search(const HashTable *table, const char *key) {
-  if (!table || !key)
+// vyhladanie v tabulke
+HTItem* ht_search(HashTable *table, unsigned char *key) {
+  unsigned long hash = ht_hash(key); // ziskame hash podla kluca
+    int ind = hash % HT_CAPACITY; // pociatocny index h1
+    int step = (hash % (HT_CAPACITY - 1)) + 1; // krok na posun pre h2
+    for (int i = 0; i < HT_CAPACITY; i++) { // prechadzane tabulku
+        if (table->items[ind].state == HT_SLOT_EMPTY) { // ak je slot prazdny, prvok v tabulke nieje
+            return NULL; 
+        }
+        if (table->items[ind].state == HT_SLOT_OCCUPIED && strcmp((char *)table->items[ind].key, (char *)key) == 0) { // ak sme nasli zhodu kluca
+            return &table->items[ind]; // vratime najdeny prvok
+        }
+        ind = (ind + step) % HT_CAPACITY;  // posun na dalsi index podla kroku
+    }
     return NULL;
-
-  size_t start_idx = ht_hash(key) % HT_CAPACITY;
-
-  for (size_t step = 0; step < HT_CAPACITY; step++) {
-    size_t idx = (start_idx + step) % HT_CAPACITY;
-
-    // Ak je slot prazdny, kluc sa v tomto retazci nenachadza
-    if (table->items[idx].state == HT_SLOT_EMPTY) {
-      return NULL;
-    }
-
-    // Ak je slot obsadeny, skontrolujeme zhodu kluca
-    if (table->items[idx].state == HT_SLOT_OCCUPIED) {
-      if (strcmp(table->items[idx].key, key) == 0) {
-        return (HTItem *)&table->items[idx];
-      }
-    }
-    // Ak je stav HT_SLOT_DELETED, pokracujeme v linearnom preberani
-  }
-
-  return NULL;
 }
 
-bool ht_insert(HashTable *table, const char *key, void *value) {
-  if (!table || !key)
-    return false;
-
-  // Najprv skontrolujeme, ci kluc uz existuje, a aktualizujeme hodnotu
-  HTItem *existing = ht_search(table, key);
-  if (existing) {
-    existing->value = value;
-    return true;
-  }
-
-  // Kontrola zaplnenia tabulky
-  if (table->count >= HT_CAPACITY) {
-    return false;
-  }
-
-  size_t start_idx = ht_hash(key) % HT_CAPACITY;
-
-  // Linearne preberanie pre najdenie prveho volneho slotu (EMPTY alebo DELETED)
-  for (size_t step = 0; step < HT_CAPACITY; step++) {
-    size_t idx = (start_idx + step) % HT_CAPACITY;
-
-    if (table->items[idx].state == HT_SLOT_EMPTY ||
-        table->items[idx].state == HT_SLOT_DELETED) {
-      char *kcopy = str_dup(key);
-      if (!kcopy)
+// vkladaie do tabulky
+bool ht_insert(HashTable *table, unsigned char *key, void *value) {
+  HTItem *found = ht_search(table, key); // hladanie ci je prvok uz v tabulke
+    if (found != NULL) { // ak existuje len prepiseme hodnotu
+        found->value = value;
+        return true;
+    }
+    if (table->count >= HT_CAPACITY) { // kontrola ci nieje tabulka plna
         return false;
-
-      table->items[idx].key = kcopy;
-      table->items[idx].value = value;
-      table->items[idx].state = HT_SLOT_OCCUPIED;
-      table->count++;
-      return true;
     }
-  }
-
-  return false;
+    unsigned long hash = ht_hash(key); // ziskame hash podla kluca
+    int ind = hash % HT_CAPACITY; // pociatocny index h1
+    int step = (hash % (HT_CAPACITY - 1)) + 1; // krok na posun pre h2
+    for (int i = 0; i < HT_CAPACITY; i++) { // prechadzanie tabulky
+        if (table->items[ind].state == HT_SLOT_EMPTY || table->items[ind].state == HT_SLOT_DELETED) {
+            char *kcopy = malloc(strlen((char *)key) + 1);
+            if (!kcopy) return false;
+            strcpy(kcopy, (char *)key);
+            table->items[ind].key = kcopy;
+            table->items[ind].value = value;
+            table->items[ind].state = HT_SLOT_OCCUPIED;
+            table->count++;
+            return true;
+        }
+        ind = (ind + step) % HT_CAPACITY;
+    }
+    return false; 
 }
 
-bool ht_delete(HashTable *table, const char *key) {
-  if (!table || !key)
-    return false;
+bool ht_delete(HashTable *table, unsigned char *key) {
+  unsigned long hash = ht_hash(key); // ziskame hash podla kluca
+    int ind = hash % HT_CAPACITY; // pociatocny index h1
+    int step = (hash % (HT_CAPACITY - 1)) + 1; // krok na posun pre h2
+    for (int i = 0; i < HT_CAPACITY; i++) { // prechadzanie tabulky
 
-  size_t start_idx = ht_hash(key) % HT_CAPACITY;
+      if (table->items[ind].state == HT_SLOT_EMPTY) { // ak narazime na prazdny slot, prvok v tabulke urcite nie je
+        return false;
+      }
 
-  for (size_t step = 0; step < HT_CAPACITY; step++) {
-    size_t idx = (start_idx + step) % HT_CAPACITY;
-
-    if (table->items[idx].state == HT_SLOT_EMPTY) {
-      return false;
-    }
-
-    if (table->items[idx].state == HT_SLOT_OCCUPIED) {
-      if (strcmp(table->items[idx].key, key) == 0) {
-        free(table->items[idx].key);
-        table->items[idx].key = NULL;
-        table->items[idx].value = NULL;
-        table->items[idx].state = HT_SLOT_DELETED; // Oznacenie hrobceka
+      if (table->items[ind].state == HT_SLOT_OCCUPIED && strcmp((char *)table->items[ind].key, (char *)key) == 0) {
+        free(table->items[ind].key);
+        table->items[ind].key = NULL;
+        table->items[ind].value = NULL;
+        table->items[ind].state = HT_SLOT_DELETED;
         table->count--;
         return true;
       }
+      ind = (ind + step) % HT_CAPACITY;
     }
-  }
+    return false;
+}    
 
-  return false;
-}
+// vycistenie celej tabulky a uvolnenie pamate
+void ht_clear(HashTable *table, free_func_t free_val) {
+    for (int i = 0; i < HT_CAPACITY; i++) { // prejdeme vsetky sloty
+        if (table->items[i].state == HT_SLOT_OCCUPIED) { // uvolnujeme len obsadene sloty
+            free(table->items[i].key); // uvolnime alokovany kluc
+            table->items[i].key = NULL;
 
-void ht_clear(HashTable *table, void (*free_val)(void *)) {
-  if (!table)
-    return;
-
-  for (size_t i = 0; i < HT_CAPACITY; i++) {
-    if (table->items[i].state == HT_SLOT_OCCUPIED) {
-      if (table->items[i].key) {
-        free(table->items[i].key);
-        table->items[i].key = NULL;
-      }
-      if (free_val && table->items[i].value) {
-        free_val(table->items[i].value);
-      }
-      table->items[i].value = NULL;
+            if (free_val != NULL && table->items[i].value != NULL) { // ak mame funkciu na uvolnenie hodnoty
+                free_val(table->items[i].value);
+            }
+            table->items[i].value = NULL;
+        }
+        table->items[i].state = HT_SLOT_EMPTY; // vyresetujeme stav slotu na prazdny
     }
-    table->items[i].state = HT_SLOT_EMPTY;
-  }
-  table->count = 0;
+    table->count = 0; // vynulujeme pocitadlo
 }
