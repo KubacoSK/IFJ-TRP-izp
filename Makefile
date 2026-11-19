@@ -3,6 +3,8 @@ CFLAGS = -Wall -Wextra -pedantic -std=c99 -I.
 
 all: ifj26
 
+build: ifj26
+
 utils.o: utils.c utils.h
 	$(CC) $(CFLAGS) -c utils.c -o utils.o
 
@@ -69,4 +71,4 @@ build-check: all check
 clean:
 	rm -f *.o ifj26 test_runner test_scanner_runner test_ht_runner test_symtable_runner
 
-.PHONY: all test test_scanner test_ht test_symtable test_e2e test_adam adam check build-check clean
+.PHONY: all build test test_scanner test_ht test_symtable test_e2e test_adam adam check build-check clean
