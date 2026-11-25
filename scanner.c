@@ -642,14 +642,15 @@ int get_token(Token *token) {
         return SCANNER_ERROR_LEX; // Tabulator na zaciatku riadku
 
       // V zatvorkach: pokracovaci riadok musi byt viac odsadeny nez logicky
-      // riadok
+      // riadok, inak sa zatvorka neuzavrela a parser dostane EOL (chyba 2)
       if (paren_depth > 0) {
-        if (c == ')' ? spaces < logical_line_indent
-                     : spaces <= logical_line_indent) {
-          return SCANNER_ERROR_LEX;
-        }
         is_at_line_start = false;
         ungetc(c, source_file);
+        if (c == ')' ? spaces < logical_line_indent
+                     : spaces <= logical_line_indent) {
+          token->type = TOKEN_TYPE_EOL;
+          return SCANNER_TOKEN_OK;
+        }
         break;
       }
 

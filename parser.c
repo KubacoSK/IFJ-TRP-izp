@@ -654,6 +654,10 @@ static int parse_call(DataType *out_type) {
     }
   }
 
+  // chybajuca ')' je syntakticka chyba, ma prednost pred poctom argumentov
+  if (!check(TOKEN_TYPE_RIGHT_PAREN))
+    return ERROR_SYNTAX;
+
   // malo argumentov
   if (arg_count < func->data.func.param_count)
     return ERROR_SEM_PARAM;
