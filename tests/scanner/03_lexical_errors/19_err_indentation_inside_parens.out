@@ -1,6 +1,7 @@
-EXIT_CODE: 1
+EXIT_CODE: 2
 # Špecifikácia sekcia 1.2: "Uvnitř závorek musí po fyzickém konci řádku být následující řádek odsazen více než začátek příslušného logického řádku."
-# Riadok '  val x = (1 +' má odsadenie 2 medzery, pokračujúci riadok '  2)' má tiež iba 2 medzery (nie je odsadený viac) -> chyba odsadenia (kód 1).
+# Riadok '  val x = (1 +' má odsadenie 2 medzery, pokračujúci riadok '  2)' má tiež iba 2 medzery (nie je odsadený viac) -> zátvorka sa neuzavrela, scanner vráti EOL a parser hlási syntaktickú chybu (kód 2).
 KW_DEF ID(foo) LPAREN RPAREN COLON KW_INT ASSIGN EOL
 INDENT
-KW_VAL ID(x) ASSIGN LPAREN INT(1) PLUS LEXICAL_ERROR
+KW_VAL ID(x) ASSIGN LPAREN INT(1) PLUS EOL
+SYNTAX_ERROR

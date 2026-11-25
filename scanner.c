@@ -258,6 +258,10 @@ static int skip_to_next_char(int *out_char, int *spaces, bool *tab_found) {
           *out_char = '\n';
           return SCANNER_TOKEN_OK;
         }
+        // jednoriadkovy komentar je biely znak, odsadenie riadku urcuju iba
+        // medzery pred nim
+        spaces = NULL;
+        tab_found = NULL;
         continue;
       }
       if (n != EOF)
@@ -729,6 +733,10 @@ int get_token(Token *token) {
       return emit_token(token, TOKEN_TYPE_COLON);
     case ';':
       return emit_token(token, TOKEN_TYPE_SEMICOLON);
+    case '{':
+      return emit_token(token, TOKEN_TYPE_LEFT_BRACE);
+    case '}':
+      return emit_token(token, TOKEN_TYPE_RIGHT_BRACE);
     case '=':
       return emit_match_or_single(token, '=', TOKEN_TYPE_EQ, TOKEN_TYPE_ASSIGN);
     case '!':

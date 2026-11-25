@@ -716,7 +716,9 @@ def m() =
     print(toStr(result + strLength(subStr("abcd", 1, 3))))' '50' '3\n'
 okm readint_pretecenie '  print(readInt())
   print("|")
-  print(readInt())' '0|3000000000' '99999999999999999999\n3000000000\n'
+  print(readInt())
+  print("|")
+  print(readInt())' '0|0|0' '99999999999999999999\n3000000000\n2147483648\n'
 
 # ---------------------------------------------------------------------------
 end_group

@@ -81,6 +81,8 @@ typedef enum {
   TOKEN_TYPE_DOT,         // .
   TOKEN_TYPE_COLON,       // :
   TOKEN_TYPE_SEMICOLON,   // ;
+  TOKEN_TYPE_LEFT_BRACE,  // { (IFJ26 ho nepodporuje, parser hlasi chybu 2)
+  TOKEN_TYPE_RIGHT_BRACE, // } (IFJ26 ho nepodporuje, parser hlasi chybu 2)
 
   // Aliasy pre kompatibilitu
   TOKEN_TYPE_LEFT_BRACKET = TOKEN_TYPE_LEFT_PAREN,

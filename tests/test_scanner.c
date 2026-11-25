@@ -390,8 +390,11 @@ int main(void) {
     check_error("Logicke OR '|' zamietnute", "|", SCANNER_ERROR_LEX);
     check_error("Hranata zatvorka '[' zamietnuta", "[", SCANNER_ERROR_LEX);
     check_error("Hranata zatvorka ']' zamietnuta", "]", SCANNER_ERROR_LEX);
-    check_error("Zlozena zatvorka '{' zamietnuta", "{", SCANNER_ERROR_LEX);
-    check_error("Zlozena zatvorka '}' zamietnuta", "}", SCANNER_ERROR_LEX);
+    // Zlozene zatvorky su tokeny, nepodporovany blok { } zamietne parser (2)
+    int brace_types[] = {TOKEN_TYPE_LEFT_BRACE, TOKEN_TYPE_RIGHT_BRACE,
+                         TOKEN_TYPE_EOL, TOKEN_TYPE_EOF};
+    check_tokens("Zlozene zatvorky '{' a '}' su tokeny pre parser", "{}",
+                 brace_types, sizeof(brace_types) / sizeof(brace_types[0]));
     check_error("Ne-ASCII znak '$' zamietnuty", "$", SCANNER_ERROR_LEX);
   }
 
@@ -426,13 +429,19 @@ int main(void) {
                 SCANNER_ERROR_LEX);
 
     // V zatvorkach musi byt pokracovaci riadok odsadeny viac nez zaciatok
-    // logickeho riadku
+    // logickeho riadku, inak scanner vrati EOL a parser hlasi chybu 2
     const char *bad_paren_indent = "val x = (\n"
                                    "1 + 2\n"
                                    ")";
-    check_error(
+    int bad_paren_types[] = {
+        TOKEN_TYPE_KEYWORD,    TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_ASSIGN,
+        TOKEN_TYPE_LEFT_PAREN, TOKEN_TYPE_EOL,        TOKEN_TYPE_INT_NUMBER,
+        TOKEN_TYPE_PLUS,       TOKEN_TYPE_INT_NUMBER, TOKEN_TYPE_RIGHT_PAREN,
+        TOKEN_TYPE_EOL,        TOKEN_TYPE_EOF};
+    check_tokens(
         "Pokracovaci riadok v zatvorkach nie je odsadeny viac nez zaciatok",
-        bad_paren_indent, SCANNER_ERROR_LEX);
+        bad_paren_indent, bad_paren_types,
+        sizeof(bad_paren_types) / sizeof(bad_paren_types[0]));
   }
 
   // ---------------------------------------------------------

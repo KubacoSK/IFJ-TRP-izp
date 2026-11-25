@@ -35,10 +35,7 @@ static int failed_tests = 0;
   } while (0)
 
 // AI (Claude Code, Claude Opus 5.5)
-// Prompt: "Uprav tabulku symbolov na 100 % skryty (opaque) ADT: ...
-// symtable_init nahrad symtable_create, uprav main.c a test_symtable.c."
-// (vsetky testy v subore pouzivaju Symtable * zo symtable_create)
-// Test inicializacie tabulky symbolov
+// Prompt: "Doplnit testy na jedinecne ID premennej (VarData.id): start pocitadla, jedinecnost v rozsahu, zatienenie, surodenecke rozsahy a ID vratene pri vyhladani."
 static void test_init_table(void) {
   printf("--- Test: Inicializacia tabulky symbolov ---\n");
   Symtable *st = symtable_create();
