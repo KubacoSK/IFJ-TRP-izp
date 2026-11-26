@@ -40,6 +40,8 @@ static int main_idx = -1;        // funkcia s @main
 static bool gen_error = false;   // chyba alokacie pocas generovania
 static unsigned label_count = 0; // pocitadlo navesti if/while
 
+// Claude Opus 5.5
+// "Vystup nech ide do bufferu co sa sam zvacsuje, nie rovno na stdout"
 // pridanie formatovaneho riadku do bufferu
 static void buf_vappend(StrBuf *b, const char *fmt, va_list args) {
   va_list copy;
@@ -72,6 +74,9 @@ static void buf_vappend(StrBuf *b, const char *fmt, va_list args) {
   b->data[b->len] = '\0';
 }
 
+// Claude Opus 5.5
+// "kazda funkcia bude mat svoj kod zvlast, parser moze skocit do inej
+// funkcie v strede tej prvej. pole nech rastie podla potreby"
 // zaistenie miesta pre funkciu idx
 static bool ensure_func(int idx) {
   if ((size_t)idx < func_cap)
@@ -88,6 +93,9 @@ static bool ensure_func(int idx) {
   return true;
 }
 
+// Claude Opus 5.5
+// "Ked parser zacne novu funkciu tak ju treba ulozit a vsetko dalsie pisat
+// do nej taktiez treba skontrolovat aj ktora je main"
 void gen_function_begin(int idx, const char *name, bool is_main) {
   if (idx < 0 || !ensure_func(idx)) {
     gen_error = true;
@@ -103,20 +111,25 @@ void gen_function_begin(int idx, const char *name, bool is_main) {
   current = idx;
 }
 
+// vysledok je uz na zasobniku, epilog funkcie je rovnaky
 void gen_return(void) {
   gen_emit("POPFRAME");
   gen_emit("RETURN");
 }
 
+// vysledok tela (po pripadnej konverzii) je na zasobniku
 void gen_function_end(void) {
-  // vysledok tela (po pripadnej konverzii) je na zasobniku
   gen_return();
 }
 
+// volanie uzivatelskej funkcie, argumenty su na zasobniku zlava doprava
 void gen_call(const char *name) { gen_emit("CALL $f$%s", name); }
 
+// prepnutie aktualnej funkcie, zaporny idx instrukcie zahodi
 void gen_select(int idx) { current = ((size_t)idx < func_cap) ? idx : -1; }
 
+// Claude Sonnet 5.5
+// "definicie premennych daj na zaciatok funkcie"
 void gen_def(const char *fmt, ...) {
   if (current < 0)
     return;
@@ -126,6 +139,9 @@ void gen_def(const char *fmt, ...) {
   va_end(args);
 }
 
+// Claude Sonnet 5.5
+// "Zvysne instrukcie nech idu normalne do tela aktualnej funkcie,
+// parser nema riesit nic nizkourovnove"
 void gen_emit(const char *fmt, ...) {
   if (current < 0)
     return;
@@ -135,17 +151,20 @@ void gen_emit(const char *fmt, ...) {
   va_end(args);
 }
 
+//  PUSHS int@
 void gen_push_int(int64_t value) {
   gen_emit("PUSHS int@%lld", (long long)value);
 }
 
+// desatinne cislo vo formate floatu
 void gen_push_double(double value) { gen_emit("PUSHS float@%a", value); }
 
+// PUSHS string@ s escape sekvenciami \xyz
 void gen_push_string(const char *value) {
   if (current < 0)
     return;
 
-  // najhorsi pripad: kazdy znak ako \xyz (4 znaky)
+  // kazdy znak ako \xyz (4 znaky)
   size_t len = strlen(value);
   char *esc = malloc(len * 4 + 1);
   if (!esc) {
@@ -169,23 +188,30 @@ void gen_push_string(const char *value) {
   free(esc);
 }
 
+// PUSHS nil@nil (hodnota Unit)
 void gen_push_unit(void) { gen_emit("PUSHS nil@nil"); }
 
+// DEFVAR LF@name$id, id rozlisi zatienene premenne
 void gen_defvar(const char *name, unsigned id) {
   gen_def("DEFVAR LF@%s$%u", name, id);
 }
 
+// PUSHS LF@name$id
 void gen_push_var(const char *name, unsigned id) {
   gen_emit("PUSHS LF@%s$%u", name, id);
 }
 
+// POPS LF@name$id
 void gen_pop_var(const char *name, unsigned id) {
   gen_emit("POPS LF@%s$%u", name, id);
 }
 
+// konverzia Int -> Double na vrchu zasobnika (INT2FLOATS)
 void gen_convert_top(void) { gen_emit("INT2FLOATS"); }
 
-// neostra nerovnost: (a strict b) OR (a == b), operandy sa zduplikuju
+// Claude Opus 5.5
+// "<= a >= sprav ako kombinaciu mensie/vacsie alebo rovne"
+// neostra nerovnost: (a >< b) OR (a == b), operandy sa zduplikuju
 static void gen_rel_or_eq(const char *strict) {
   gen_emit("POPS LF@%%t2");
   gen_emit("POPS LF@%%t1");
@@ -198,6 +224,11 @@ static void gen_rel_or_eq(const char *strict) {
   gen_emit("ORS");
 }
 
+// Claude Opus 5.5
+// "pre binarne operatory vygeneruj spravnu instrukciu podla typov.
+// ked je jeden int a druhy double tak treba int prekonvertovat, delenie
+// dvoch intov je celociselne a retazce sa spajaju inak lebo na to nie
+// je zasobnikova verzia"
 void gen_binary(TokenType op, DataType left, DataType right) {
   // Int -> Double, ak je druhy operand Double
   if (left == TYPE_INT && right == TYPE_DOUBLE) {
@@ -255,11 +286,12 @@ void gen_binary(TokenType op, DataType left, DataType right) {
   }
 }
 
+// unarne + / - pre Int alebo Double
 void gen_unary(TokenType op, DataType type) {
   if (op != TOKEN_TYPE_MINUS)
     return; // unarne + hodnotu nemeni
 
-  // IFJcode26 nema negaciu: nasobenie -1 (pri Double zachova aj -0.0)
+  // IFJ kod nema negaciu: nasobenie -1 (pri Double zachova aj -0.0)
   if (type == TYPE_DOUBLE)
     gen_emit("PUSHS float@%a", -1.0);
   else
@@ -267,29 +299,37 @@ void gen_unary(TokenType op, DataType type) {
   gen_emit("MULS");
 }
 
+// zahodenie hodnoty na vrchu zasobnika
 void gen_drop(void) { gen_emit("POPS LF@%%t1"); }
 
+// nove cislo navestia pre if/while
 unsigned gen_new_label(void) { return ++label_count; }
 
+// podmienka if na zasobniku, pri false skok na $if$n$else
 void gen_if_cond(unsigned n) {
   gen_emit("PUSHS bool@true");
   gen_emit("JUMPIFNEQS $if$%u$else", n);
 }
 
+// koniec vetvy then, zaciatok vetvy else
 void gen_if_else(unsigned n) {
   gen_emit("JUMP $if$%u$end", n);
   gen_emit("LABEL $if$%u$else", n);
 }
 
+// koniec if, navestie $if$N$end  
 void gen_if_end(unsigned n) { gen_emit("LABEL $if$%u$end", n); }
 
+// zaciatok cyklu while pred podmienkou
 void gen_while_start(unsigned n) { gen_emit("LABEL $while$%u$start", n); }
 
+// podmienka while na zasobniku, pri false skok na $while$n$end
 void gen_while_cond(unsigned n) {
   gen_emit("PUSHS bool@true");
   gen_emit("JUMPIFNEQS $while$%u$end", n);
 }
 
+// koniec tela while, skok na zaciatok, vysledok Unit
 void gen_while_end(unsigned n) {
   gen_drop(); // hodnota tela sa v cykle nepouzije
   gen_emit("JUMP $while$%u$start", n);
@@ -309,6 +349,9 @@ static void gen_print(DataType arg_type) {
   gen_push_unit();
 }
 
+// Claude Sonnet 5.5
+// "toStr rob podla typu ktory uz pozname pri preklade,
+// string nechaj tak"
 // toStr(x): typ argumentu je znamy pri preklade
 static void gen_to_str(DataType arg_type) {
   switch (arg_type) {
@@ -327,7 +370,7 @@ static void gen_to_str(DataType arg_type) {
   }
 }
 
-// strLength(s): STRLEN nema zasobnikovu verziu
+// strLength(x): retazec na zasobniku, vysledok Int
 static void gen_str_length(void) {
   gen_emit("POPS LF@%%t1");
   gen_emit("STRLEN LF@%%t1 LF@%%t1");
@@ -337,7 +380,10 @@ static void gen_str_length(void) {
 // vstavane funkcie generovane ako knizicne funkcie $b$meno
 static const char *const lib_names[] = {"readLine", "readInt", "readDouble",
                                         "ord", "subStr"};
-
+// Claude Opus 5.5
+// "Jednoduche vstavane funkcie generuj priamo a zlozitejsie ako samostatne
+// funkcie co sa volaju. Po volani ma na zasobniku zostat
+// presne jeden vysledok"
 void gen_builtin_call(const char *name, const DataType *arg_types,
                       size_t arg_count) {
   if (strcmp(name, "print") == 0 && arg_count == 1) {
@@ -361,6 +407,11 @@ void gen_builtin_call(const char *name, const DataType *arg_types,
   }
 }
 
+// Claude Opus 5.5
+// "Kniznica vstavanych funkcii sa bude vypisovat cela, kazda funkcia ma
+// rovnaky zaciatok ako uzivateske funkcie s LF1 a LF2, readdouble
+// vrati pri EOF alebo chybnom vstupe 0.0, readInt 0, ord vrati mimo rozsahu
+// -1 a subStr skonci pri chybnych indexoch chybou 40"
 // kniznica vstavanych funkcii, vypisuje sa vzdy cela (iba text, bez printf)
 static const char *const builtin_lib[] = {
     // readLine(): vracia riadok vratane LF, po EOF prazdny retazec ""
@@ -478,6 +529,8 @@ static const char *const builtin_lib[] = {
     "EXIT int@40\n",
 };
 
+// vypisanie celeho vygenerovaneho kodu do suboru out, vracia ERROR_OK alebo ERROR_INTERNAL
+// vypis je az na konci, ak parser narazi na chybu tak sa uz nic nevypisuje
 int gen_write(FILE *out) {
   if (gen_error || main_idx < 0)
     return ERROR_INTERNAL;
@@ -510,6 +563,7 @@ int gen_write(FILE *out) {
   return ERROR_OK;
 }
 
+// uvolnenie vsetkych alokovanych bufferov a reset generatora
 void gen_free(void) {
   for (size_t i = 0; i < func_cap; i++) {
     free(funcs[i].name);
