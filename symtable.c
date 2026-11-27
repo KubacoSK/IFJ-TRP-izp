@@ -108,6 +108,11 @@ void symtable_restore_scopes(Symtable *st, Scope *saved) {
   st->current_scope = saved;
 }
 
+// AI Google Gemini, model Gemini 3.8 Flash
+// "NAimplementuj kostru funkciu symtable_add_var ktora alokuje novy Symbol pre
+// premennu skopiruje jej meno nastavi typ a priznaky a vlozi ju cez pomocou
+// funkcie do aktualneho ramca"
+
 // Pridanie premennej do aktualneho lokalneho ramca
 Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
                          bool is_constant, bool is_initialized) {
@@ -136,6 +141,11 @@ Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
   return sym;
 }
 
+// AI Google Gemini, model Gemini 3.8 Flash
+// "implementuj mi kostru funkcie symtable_find_var_current_scope ktora zavola
+// search cisto iba na aktualnom ramci a vrati najdeny symbol taktiez checkni
+// prosim mozne errori"
+
 // Vyhladanie premennej v najvnutornejsom aktualnom ramci
 Symbol *symtable_find_var_current_scope(const Symtable *st, const char *name) {
   if (!st || !st->current_scope || !name)
@@ -143,6 +153,11 @@ Symbol *symtable_find_var_current_scope(const Symtable *st, const char *name) {
   HTItem *item = ht_search(&st->current_scope->table, (unsigned char *)name);
   return item ? (Symbol *)item->value : NULL;
 }
+
+// AI Google Gemini, model Gemini 3.8 Flash
+// "vytvor mi kostru funkcie symtable_find_var kde prechadzaj scope
+// smerom hore na kazdej urovni budes volat funkciu search
+// a vrati mi prvy najdeny symbol v item value a osetri mozne errori"
 
 // Vyhladanie premennej postupne cez vsetky viditelne ramce (od aktualneho k
 // vonkajsim)
@@ -157,6 +172,11 @@ Symbol *symtable_find_var(const Symtable *st, const char *name) {
   }
   return NULL;
 }
+
+// AI Google Gemini, model Gemini 3.8 Flash
+// "priprav mi prosim kostru funkcie symtable_add_func ktora alokuje Symbol pre
+// funkciu, skopiruje jej meno aj pole parametrov Param cez calloc a str_dup a
+// vlozi funkciu cez insert do table ak nieco zlyha freenito a oprav errori"
 
 // Pridanie funkcie do globalnej tabulky
 Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,

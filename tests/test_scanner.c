@@ -122,9 +122,6 @@ int main(void) {
   printf(COLOR_BLUE "========================================================"
                     "\n\n" COLOR_RESET);
 
-  // ---------------------------------------------------------
-  // KATEGORIA 1: ZAKLADNE KLUCOVE SLOVA (14 slov)
-  // ---------------------------------------------------------
   printf("--- Kategoria 1: Zakladne klucove slova (14 slov) ---\n");
   {
     const char *kw_input = "def do Double else if import Int return String "
@@ -150,9 +147,6 @@ int main(void) {
         case_input, case_types, sizeof(case_types) / sizeof(case_types[0]));
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 2: IDENTIFIKATORY A PRAVIDLA PRE PODTRZITKA
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 2: Identifikatory a pravidla pre podtrzitka ---\n");
   {
     const char *id_input = "x myVar _internal __private counter123 a_b_c";
@@ -181,9 +175,6 @@ int main(void) {
                      sizeof(underscore_expr_types[0]));
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 3: ANOTACIA @main
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 3: Anotacia @main ---\n");
   {
     const char *main_input = "@main def run(): Unit =";
@@ -202,9 +193,6 @@ int main(void) {
     check_error("Samostatny znak '@'", "@", SCANNER_ERROR_LEX);
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 4: CELOCISELNE LITERALY
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 4: Celociselne literaly ---\n");
   {
     const char *int_input = "0 42 1_000_000 12_34_56";
@@ -233,9 +221,6 @@ int main(void) {
     check_error("Podtrzitko na nule '0_' zamietnute", "0_", SCANNER_ERROR_LEX);
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 5: DESATINNE LITERALY
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 5: Desatinne literaly ---\n");
   {
     const char *double_input = "12.34 .5 1.2e-3 12e3 1.5d 10.0D";
@@ -274,9 +259,6 @@ int main(void) {
                 SCANNER_ERROR_LEX);
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 6: RETAZCE A ESCAPE SEKVENCIE
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 6: Retazce a escape sekvencie ---\n");
   {
     // Jednoriadkove retazce s povolenymi escape sekvenciami
@@ -312,9 +294,6 @@ int main(void) {
         "\"line1\nline2\"", SCANNER_ERROR_LEX);
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 7: KOMENTARE
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 7: Komentare ---\n");
   {
     const char *comments_input =
@@ -346,9 +325,6 @@ int main(void) {
                 "/* /* vnoreny */", SCANNER_ERROR_LEX);
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 8: ZAKLADNE OPERATORY A ODDELOVACE
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 8: Zakladne operatory a oddelovace ---\n");
   {
     const char *ops_input = "+ - * / == != < <= > >= = ( ) , . : ;";
@@ -398,9 +374,6 @@ int main(void) {
     check_error("Ne-ASCII znak '$' zamietnuty", "$", SCANNER_ERROR_LEX);
   }
 
-  // ---------------------------------------------------------
-  // KATEGORIA 9: ODSADENIE A OFF-SIDE PRAVIDLO
-  // ---------------------------------------------------------
   printf("\n--- Kategoria 9: Odsadenie a off-side pravidlo ---\n");
   {
     const char *indent_input = "def foo():\n"
@@ -444,9 +417,6 @@ int main(void) {
         sizeof(bad_paren_types) / sizeof(bad_paren_types[0]));
   }
 
-  // ---------------------------------------------------------
-  // ZAVERECNE VYHODNOTENIE
-  // ---------------------------------------------------------
   printf(
       "\n" COLOR_BLUE
       "========================================================\n" COLOR_RESET);

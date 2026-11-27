@@ -96,7 +96,7 @@ static int unget_top = -1;        // Index vrchu zasobnika vratenych tokenov
 
 // Nastavenie zdrojoveho suboru a reset scanneru
 void set_source_file(FILE *f) {
-  source_file = f;
+  source_file = f ? f : stdin;
   reset_scanner();
 }
 
@@ -272,6 +272,10 @@ static int skip_to_next_char(int *out_char, int *spaces, bool *tab_found) {
   }
 }
 
+// AI Google Gemini, model Gemini 3.8 Flash
+// "sprav mi kostru funkcie na nacitanie int a double cisiel v C,
+// maju tam byt podtrzitka medzi cislicami, .5 na zaciatku, exponent,
+// sufix d/D a zakaz uvodnej nuly ako 01 plus mi vysvetli preco a co tam ma byt"
 // Nacitanie cislic s oddelovacimi podtrzitkami (napr. 1_000)
 static int scan_digits_with_underscores(Buffer *buf, int *next_char) {
   int c = get_char();
@@ -600,12 +604,14 @@ static int emit_match_or_single(Token *token, char expected, TokenType matched,
 
 // Hlavna funkcia pre nacitanie dalsieho tokenu zo zdrojoveho suboru
 int get_token(Token *token) {
-  if (!token || !source_file)
+  if (!token)
     return ERROR_INTERNAL;
+  if (!source_file)
+    source_file = stdin;
   token->attribute.string = NULL;
   token->had_preceding_newline = false;
 
-  // Vratenie tokenu zo zasobnika lookaheadu
+  // Vratenie tokenu zo zasobnika
   if (unget_top >= 0) {
     *token = unget_buf[unget_top--];
     if (token->type == TOKEN_TYPE_LEFT_PAREN)
@@ -627,6 +633,10 @@ int get_token(Token *token) {
     return handle_eof(token);
 
   while (1) {
+    // AI Google Gemini, model Gemini 3.8 Flash
+    // "sprav mi kostru bloku na zaciatku riadku v C pre odsadenie
+    // indent/dedent cez zasobnik a kontrolu odsadenia pokracovacich riadkov
+    // v zatvorkach a vysvetli mi preco co kde ma byt"
     // Kontrola odsadenia na zaciatku noveho fyzickeho riadku
     while (is_at_line_start) {
       int spaces = 0;
