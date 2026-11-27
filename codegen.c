@@ -118,9 +118,7 @@ void gen_return(void) {
 }
 
 // vysledok tela (po pripadnej konverzii) je na zasobniku
-void gen_function_end(void) {
-  gen_return();
-}
+void gen_function_end(void) { gen_return(); }
 
 // volanie uzivatelskej funkcie, argumenty su na zasobniku zlava doprava
 void gen_call(const char *name) { gen_emit("CALL $f$%s", name); }
@@ -317,7 +315,7 @@ void gen_if_else(unsigned n) {
   gen_emit("LABEL $if$%u$else", n);
 }
 
-// koniec if, navestie $if$N$end  
+// koniec if, navestie $if$N$end
 void gen_if_end(unsigned n) { gen_emit("LABEL $if$%u$end", n); }
 
 // zaciatok cyklu while pred podmienkou
@@ -529,7 +527,8 @@ static const char *const builtin_lib[] = {
     "EXIT int@40\n",
 };
 
-// vypisanie celeho vygenerovaneho kodu do suboru out, vracia ERROR_OK alebo ERROR_INTERNAL
+// vypisanie celeho vygenerovaneho kodu do suboru out, vracia ERROR_OK alebo
+// ERROR_INTERNAL
 // vypis je az na konci, ak parser narazi na chybu tak sa uz nic nevypisuje
 int gen_write(FILE *out) {
   if (gen_error || main_idx < 0)

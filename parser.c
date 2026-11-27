@@ -362,11 +362,12 @@ static int analyze_on_demand(int idx) {
 }
 
 // DeepSeek - use_function, analyze_on_demand, analyze_function
-// "mame jazyk kde funkcia nemusi mat navratovy typ v hlavicke a odvodi sa z tela. 
-// problem je ked main vola funkciu ktora je definovana az pod nim, vtedy jej typ este nepoznam. 
-// tokeny mam v poli takze mozem skocit na index. 
-// ako by sa dalo spravit ze si ulozim stav (pos, aktualny navratovy typ, scope v symtable), 
-// skocim analyzovat tu funkciu a potom sa vratim? a ako odhalit ze funkcia bez typu vola sama seba"
+// "mame jazyk kde funkcia nemusi mat navratovy typ v hlavicke a odvodi sa z
+// tela. problem je ked main vola funkciu ktora je definovana az pod nim, vtedy
+// jej typ este nepoznam. tokeny mam v poli takze mozem skocit na index. ako by
+// sa dalo spravit ze si ulozim stav (pos, aktualny navratovy typ, scope v
+// symtable), skocim analyzovat tu funkciu a potom sa vratim? a ako odhalit ze
+// funkcia bez typu vola sama seba"
 
 // volanie funkcie: zapise hranu a zisti jej typ, ak este nie je znamy
 static int use_function(const Symbol *func) {
@@ -407,10 +408,10 @@ static bool reaches(int from, int target, bool *visited) {
 }
 
 // DeepSeek - check_recursion, reaches, add_callee
-// potrebujem odhalit aj nepriamu rekurziu, napr f vola g a g vola f, a ak f nema typ v hlavicke 
-// tak je to chyba 6. pri parsovani si ukladam kto koho vola. 
-// ako by vyzeralo jednoduche DFS v C ktore zisti ci sa z funkcie viem dostat spat do nej? 
-// nechcem nic zlozite, funkcii nebude vela
+// potrebujem odhalit aj nepriamu rekurziu, napr f vola g a g vola f, a ak f
+// nema typ v hlavicke tak je to chyba 6. pri parsovani si ukladam kto koho
+// vola. ako by vyzeralo jednoduche DFS v C ktore zisti ci sa z funkcie viem
+// dostat spat do nej? nechcem nic zlozite, funkcii nebude vela
 
 // priama aj neprama rekurzia vyzaduje typ v hlavicke
 static int check_recursion(void) {
@@ -570,9 +571,9 @@ static bool has_operand(const ExprStack *s) {
 }
 
 // DeepSeek - token_to_prec, has_operand
-// "ako v precedencnej analyze rozlisim unarne minus od binarneho? napr -a - -b alebo 3 * -x. 
-// scanner mi vracia stale len TOKEN_TYPE_MINUS. 
-// napadlo ma pozerat na to co je na vrchu zasobnika ale neviem ci to staci"
+// "ako v precedencnej analyze rozlisim unarne minus od binarneho? napr -a - -b
+// alebo 3 * -x. scanner mi vracia stale len TOKEN_TYPE_MINUS. napadlo ma
+// pozerat na to co je na vrchu zasobnika ale neviem ci to staci"
 
 // prevod aktualneho tokenu na terminal precedencnej tabulky
 static PrecSymbol token_to_prec(const ExprStack *s, int open_parens) {
@@ -612,11 +613,11 @@ static PrecSymbol token_to_prec(const ExprStack *s, int open_parens) {
 }
 
 // DeepSeek - parse_call, shift_operand,
-// "ako mam v precedencnej analyze riesit volanie funkcie ako operand? 
-// napr x = foo(a + 1, bar(2)) * 3. myslel som ze ked pri shifte vidim id a za nim 
-// ( tak rekurzivne zavolam parse_expression pre kazdy argument. 
-// treba kontrolovat pocet a typy argumentov (int sa da poslat do double, chyba 5) 
-// a ked chyba zatvorka ma to byt chyba 2"
+// "ako mam v precedencnej analyze riesit volanie funkcie ako operand?
+// napr x = foo(a + 1, bar(2)) * 3. myslel som ze ked pri shifte vidim id a za
+// nim ( tak rekurzivne zavolam parse_expression pre kazdy argument. treba
+// kontrolovat pocet a typy argumentov (int sa da poslat do double, chyba 5) a
+// ked chyba zatvorka ma to byt chyba 2"
 
 // Volanie funkcie id(arg, ...), id je aktualny token
 static int parse_call(DataType *out_type) {
@@ -743,11 +744,12 @@ static int reduce_operand(const ExprItem *i, DataType *out_type) {
 }
 
 // DeepSeek - reduce_rule, reduce_operand, reduce_operation
-// "mam hotovu precedencnu tabulku a shift, teraz potrebujem redukciu. 
-// na zasobniku mam polozky typu term / nonterm / handle. chcem aby redukcia nasla handle, 
-// zistila ktore pravidlo to je (E->i, E->(E), E->E+E, unarne...) a zaroven rovno urobila 
-// typovu kontrolu podla zadania: int+double = double, string+string je konkatenacia, 
-// porovnanie len cisla alebo stringy, inak chyba 6. a zaroven volat generator kodu"
+// "mam hotovu precedencnu tabulku a shift, teraz potrebujem redukciu.
+// na zasobniku mam polozky typu term / nonterm / handle. chcem aby redukcia
+// nasla handle, zistila ktore pravidlo to je (E->i, E->(E), E->E+E, unarne...)
+// a zaroven rovno urobila typovu kontrolu podla zadania: int+double = double,
+// string+string je konkatenacia, porovnanie len cisla alebo stringy, inak
+// chyba 6. a zaroven volat generator kodu"
 
 // Redukcia - vyberie <y z vrchu zasobnika, najde pravidlo E -> y a vykona
 // semtaticku akciu
@@ -835,11 +837,13 @@ static int parse_expression(DataType *out_type) {
 }
 
 // DeepSeek - parse_expression_inner, prec_table, insert_handle, top_terminal
-// "robim kompilator v C pre projekt, parser je rekurzivny zostup 
-// ale vyrazy mame robit precedencnou analyzou. mam operatory + - * / < <= > >= == != 
-// zatvorky a unarne minus/plus. relacne operatory nemaju byt asociativne cize a<b<c ma byt chyba. 
-// vedel by si mi pomoct spravit precedencnu tabulku a hlavnu slucku s dynamickym zasobnikom? 
-// tokeny uz mam v poli, beriem ich cez next_token(). a ako spravne vlozit tu znacku < nad najvrchnejsi terminal ked na vrchu je E"
+// "robim kompilator v C pre projekt, parser je rekurzivny zostup
+// ale vyrazy mame robit precedencnou analyzou. mam operatory + - * / < <= > >=
+// == != zatvorky a unarne minus/plus. relacne operatory nemaju byt asociativne
+// cize a<b<c ma byt chyba. vedel by si mi pomoct spravit precedencnu tabulku a
+// hlavnu slucku s dynamickym zasobnikom? tokeny uz mam v poli, beriem ich cez
+// next_token(). a ako spravne vlozit tu znacku < nad najvrchnejsi terminal ked
+// na vrchu je E"
 
 // hlavna slucka, zasobnik uvolni volajuci
 static int parse_expression_inner(ExprStack *s, DataType *out_type) {
@@ -1742,10 +1746,11 @@ static int skip_block(void) {
 }
 
 // DeepSeek - parse_headers, skip_block
-// "chcem aby sa dali volat funkcie skor nez su definovane, takze robim dva priechody. 
-// v prvom chcem len prejst hlavicky (meno, parametre, typ), ulozit ich do symtable a telo preskocit. 
-// scanner generuje INDENT a DEDENT tokeny. ako najlahsie preskocit telo funkcie 
-// aj ked su v nom vnorene bloky (if, while)? a funkcia moze byt aj jednoriadkova def f(x) = x + 1"
+// "chcem aby sa dali volat funkcie skor nez su definovane, takze robim dva
+// priechody. v prvom chcem len prejst hlavicky (meno, parametre, typ), ulozit
+// ich do symtable a telo preskocit. scanner generuje INDENT a DEDENT tokeny.
+// ako najlahsie preskocit telo funkcie aj ked su v nom vnorene bloky (if,
+// while)? a funkcia moze byt aj jednoriadkova def f(x) = x + 1"
 
 // Prvy priechod, zbieraju su hlavicky funkcii
 int parse_headers(Symtable *st) {

@@ -35,7 +35,9 @@ static int failed_tests = 0;
   } while (0)
 
 // AI (Claude Code, Claude Opus 5.5)
-// Prompt: "Doplnit testy na jedinecne ID premennej (VarData.id): start pocitadla, jedinecnost v rozsahu, zatienenie, surodenecke rozsahy a ID vratene pri vyhladani."
+// Prompt: "Doplnit testy na jedinecne ID premennej (VarData.id): start
+// pocitadla, jedinecnost v rozsahu, zatienenie, surodenecke rozsahy a ID
+// vratene pri vyhladani."
 static void test_init_table(void) {
   printf("--- Test: Inicializacia tabulky symbolov ---\n");
   Symtable *st = symtable_create();

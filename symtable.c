@@ -109,9 +109,9 @@ void symtable_restore_scopes(Symtable *st, Scope *saved) {
 }
 
 // AI Google Gemini, model Gemini 3.8 Flash
-// "NAimplementuj kostru funkciu symtable_add_var ktora alokuje novy Symbol pre premennu
-// skopiruje jej meno nastavi typ a priznaky a
-// vlozi ju cez pomocou funkcie do aktualneho ramca"
+// "NAimplementuj kostru funkciu symtable_add_var ktora alokuje novy Symbol pre
+// premennu skopiruje jej meno nastavi typ a priznaky a vlozi ju cez pomocou
+// funkcie do aktualneho ramca"
 
 // Pridanie premennej do aktualneho lokalneho ramca
 Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
@@ -142,8 +142,9 @@ Symbol *symtable_add_var(Symtable *st, const char *name, DataType type,
 }
 
 // AI Google Gemini, model Gemini 3.8 Flash
-// "implementuj mi kostru funkcie symtable_find_var_current_scope ktora zavola search
-// cisto iba na aktualnom ramci a vrati najdeny symbol taktiez checkni prosim mozne errori"
+// "implementuj mi kostru funkcie symtable_find_var_current_scope ktora zavola
+// search cisto iba na aktualnom ramci a vrati najdeny symbol taktiez checkni
+// prosim mozne errori"
 
 // Vyhladanie premennej v najvnutornejsom aktualnom ramci
 Symbol *symtable_find_var_current_scope(const Symtable *st, const char *name) {
@@ -173,9 +174,9 @@ Symbol *symtable_find_var(const Symtable *st, const char *name) {
 }
 
 // AI Google Gemini, model Gemini 3.8 Flash
-// "priprav mi prosim kostru funkcie symtable_add_func ktora alokuje Symbol pre funkciu,
-// skopiruje jej meno aj pole parametrov Param cez calloc a str_dup a vlozi
-// funkciu cez insert do table ak nieco zlyha freenito a oprav errori"
+// "priprav mi prosim kostru funkcie symtable_add_func ktora alokuje Symbol pre
+// funkciu, skopiruje jej meno aj pole parametrov Param cez calloc a str_dup a
+// vlozi funkciu cez insert do table ak nieco zlyha freenito a oprav errori"
 
 // Pridanie funkcie do globalnej tabulky
 Symbol *symtable_add_func(Symtable *st, const char *name, DataType return_type,

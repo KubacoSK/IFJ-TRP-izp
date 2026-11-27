@@ -1,6 +1,7 @@
 # Progress projektu IFJ a IAL (variant TRP-izp)
 
-Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
+Posledná aktualizácia: 26. 11. 2026 večer (vetva `Finalne-upravy`, commit
+`dca97b0`, kontrola pred finálnym odovzdaním)
 
 ## Legenda
 
@@ -13,14 +14,18 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
 - Prekladač je funkčný celok: scanner → parser (syntax + sémantika) →
   generátor IFJcode26 priamo z parsera → výpis až po úspešnej analýze.
 - Build v WSL Ubuntu (gcc 13.3) s `-Wall -Wextra -pedantic -std=c99` je bez
-  warningov.
+  warningov (cez `make` aj ručne, aj s `-O2`). Preklad na gcc 14/15/16
+  (Merlin) zatiaľ nie je overený.
 - Unit testy prechádzajú: scanner 55/55, hash tabuľka 26/26, tabuľka
   symbolov 27/27 (`make test`; `test_hashtable.c` má 28 známych warningov
-  `-Wpointer-sign`).
+  `-Wpointer-sign`). Pod `valgrind` aj ASan/UBSan bez chýb a únikov.
 - End-to-end testy prechádzajú: 184/184 (`make test_e2e`, `tests/e2e.sh`,
   preklad → `ic26int` → porovnanie výstupu a návratových kódov).
+- Adamove testy: návratový kód prekladača 101/104 (3 sporné kódy, časti 3
+  a 5), codegen testy cez interpret 26/26 vrátane výstupu a kódov 40, 57, 58.
 - `valgrind` je čistý na úspešnom preklade aj na chybových cestách (kódy 1–7,
   chyba počas analýzy na požiadanie, chyba vo vnorenom výraze).
+- **Chýba dokumentácia:** `dokumentace.pdf` má 0 B (časť 8).
 - Pri chybe prekladu je `stdout` prázdny; kód nepoužíva súbory, sieť ani
   podprocesy, iba štandardnú knižnicu C.
 - Rozšírenie FUNEXP je implementované a uvedené v súbore `rozsireni`.
@@ -34,8 +39,9 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
 
 - [x] Vytvorenie / nastavenie spoločného Git repozitára.
 - [x] Dohodnutie pravidiel práce: Conventional Commits, pull requesty a code review.
-- [x] `Makefile` s cieľmi `all` (predvolený, `ifj26`), `test`, `test_scanner`,
-  `test_ht`, `test_symtable`, `test_e2e`, `check`, `build-check`, `clean`.
+- [x] `Makefile` s cieľmi `all` (predvolený, `ifj26`), `build`, `test`,
+  `test_scanner`, `test_ht`, `test_symtable`, `test_e2e`, `test_adam`
+  (`adam`), `check`, `build-check`, `clean`.
 - [x] Architektúra bez AST: parser riadi preklad a generátor vypisuje kód
   priamo pri rozpoznaní konštrukcie (prednáška 9, prístup 3).
 - [x] Dátové štruktúry tokenov, hash tabuľky a tabuľky symbolov.
@@ -53,8 +59,9 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
 
 ### Hash tabuľka
 
-- [x] Hashovacia funkcia djb2, otvorená adresácia s lineárnym prehľadávaním,
-  stavy `EMPTY`, `OCCUPIED`, `DELETED`.
+- [x] Hashovacia funkcia djb2, otvorená adresácia s dvojitým rozptyľovaním:
+  začiatok `hash % 4093`, krok `hash % 4092 + 1` (4093 je prvočíslo, takže
+  sa prejdú všetky sloty), stavy `EMPTY`, `OCCUPIED`, `DELETED`.
 - [x] `ht_init`, `ht_insert`, `ht_search`, `ht_delete`, `ht_clear`.
 - [x] Unit testy (26/26).
 - [ ] Pevná kapacita `HT_CAPACITY 4093` bez zväčšovania: viac ako ~4093
@@ -70,10 +77,11 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
   `LF@meno$ID`.
 - [x] Vstavané funkcie vložené do tabuľky.
 - [x] Unit testy (27/27) vrátane jedinečných ID.
-- [ ] Návratové hodnoty pri zlyhaní alokácie sa nekontrolujú všade:
-  `symtable_add_builtins` v `main.c` (overené 26. 11.), ďalej skontrolovať
-  `symtable_push_scope` v `parser.c` a `str_dup` mena parametra
-  v `symtable_add_func`.
+- [ ] `symtable_add_builtins` vracia `void` a výsledky `symtable_add_func`
+  nekontroluje, takže `main.c` zlyhanie alokácie nezistí (pri použití
+  chýbajúcej vstavanej funkcie by prekladač vrátil 3 namiesto 99).
+- [x] `symtable_push_scope` v `parser.c` a `str_dup` mena parametra
+  v `symtable_add_func` sa kontrolujú (overené 26. 11.).
 - [x] Symtable je skrytý ADT (`symtable_create` / `symtable_free`, `978a84b`),
   parser už nepristupuje priamo k `current_scope`.
 
@@ -93,8 +101,13 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
   iba medzery pred ním.
 - [x] `{` a `}` sú tokeny, parser ich zamietne chybou 2.
 - [ ] Odsadenie hlbšie ako 127 úrovní vráti 99 (`MAX_INDENT_LEVELS`).
-- [ ] Skutočný tabulátor v jednoriadkovom reťazci a `"""a""""` vrátia 1,
-  Scala ich prijme (nízka priorita).
+- [x] Skutočný tabulátor v jednoriadkovom reťazci a `"""a""""` (úvodzovky
+  navyše na konci patria do reťazca, výsledok `a"`) prechádzajú
+  (overené 26. 11.).
+- [ ] `val x = 5.` vráti 2, Adamov test `09_err_double_trailing_dot` čaká 1
+  (špecifikácia 1.1: desatinná časť za bodkou je povinná).
+- [ ] Samotné `_` (`val _ = 5`) vráti 2, Adamov test `04_err_lone_underscore`
+  čaká 1, ale pripúšťa aj 2.
 
 ## 4. Syntaktická analýza / parser (Dominik)
 
@@ -109,6 +122,12 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
 - [x] Precedenčná analýza podľa prednášky 8: jeden zásobník s terminálmi,
   `E` a značkami `<`, `i` v tabuľke, redukcia hľadá pravidlo
   (`E → i`, `E → u E`, `E → ( E )`, `E → ( )`, `E → E op E`).
+- [x] `==` a `!=` sú v tabuľke na rovnakej úrovni ako `<`, `<=`, `>`, `>=`
+  (celý blok 6×6 je chyba), hoci špecifikácia im dáva nižšiu prioritu.
+  Platné programy to neovplyvní, lebo zreťazenie je zakázané; zmiešaný
+  reťazec `1 < 2 == 3 < 4` vráti 2. Na obhajobe vedieť zdôvodniť.
+- [x] Mimo slidov (vedieť vysvetliť): volanie `id(` sa spracuje pri presune
+  `i`, unárny operátor sa rozpozná podľa vrcholu zásobníka.
 - [x] Unárne `+` / `-`, zátvorky, `()` ako literál `Unit`.
 - [x] Logický riadok nesmie začínať operátorom (za `;` je povolené).
 - [x] FUNEXP: volania vo výrazoch a výrazy v argumentoch, vnorené volania,
@@ -136,6 +155,8 @@ Posledná aktualizácia: 26. 11. 2026 (vetva `main`, commit `58f5c91`)
 - [x] Pravidlá pre `if` na konci tela funkcie, rekurzívne pre vnorený `if`.
 - [x] `() == ()` a `() != ()` prechádzajú.
 - [x] Zreťazenie `1 < 2 < 3` vráti 2.
+- [ ] `val x = ( ) * 5` vráti 6 (`( )` sa berie ako `Unit`), Adamov test
+  `29_err_expr_empty_parens_in_arith` čaká 2, ale pripúšťa aj 6.
 - [ ] Poradie chýb: 1. priechod nájde lexikálnu chybu a duplicitnú funkciu
   skôr než 2. priechod (syntaktická chyba pred neukončeným reťazcom vráti 1;
   chýbajúci prolog + duplicitná funkcia vráti 4 namiesto 2).
@@ -156,10 +177,11 @@ Rozhodnutia (implementované):
 - [x] Statická konverzia `Int → Double`, `<=` / `>=` ako `(a < b) OR (a == b)`,
   `Int / Int` cez `IDIVS`, `+` reťazcov cez `CONCAT`.
 - [x] Literály `int@`, `float@%a`, `string@` s escape `\xyz`.
-- [x] Vstavané funkcie: inline `print`, `toStr`, `toInt`, `chr`, `strLength`,
-  `readLine`; knižnica `$b$` `readInt`, `readDouble`, `ord`, `subStr`
-  (chyba 40 vo všetkých 5 prípadoch).
-- [x] Otestované cez `ic26int` (e2e), kód iba na `stdout`.
+- [x] Vstavané funkcie: inline `print`, `toStr`, `toInt`, `chr`,
+  `strLength`; knižnica `$b$` `readLine`, `readInt`, `readDouble`, `ord`,
+  `subStr` (chyba 40 vo všetkých 5 prípadoch). Knižnica sa vypíše vždy celá.
+- [x] Otestované cez `ic26int` (e2e aj Adamove codegen testy), kód iba na
+  `stdout`.
 
 - [x] `readInt` mimo rozsahu Int vráti 0 (`$b$readInt` porovná s 32-bit
   hranicami); test `readint_pretecenie` očakáva `0|0|0`, vlastný program so
@@ -173,7 +195,9 @@ Rozhodnutia (implementované):
 ## 7. Testovanie, kvalita a ladenie
 
 - [x] Unit testy hash tabuľky, tabuľky symbolov a scanneru (108).
-- [x] Adamove testy `tests/{scanner,parser,codegen}/**` (104, `make test_adam`).
+- [x] Adamove testy `tests/{scanner,parser,codegen}/**` (104). `make test_adam`
+  kontroluje iba návratový kód prekladača: 101/104, sporné sú 3 kódy
+  (časti 3 a 5). Codegen testy cez `ic26int` 26/26 vrátane výstupu.
 - [x] End-to-end skript `tests/e2e.sh` (184 testov): parser, precedenčná
   analýza, literály, výrazy, riadenie toku, funkcie, vstavané funkcie,
   príklady zo špecifikácie.
@@ -181,8 +205,9 @@ Rozhodnutia (implementované):
 
 ## 8. Dokumentácia a odovzdanie
 
-- [x] Súbor `rozdeleni` (LF konce riadkov, súčet 100 %).
-- [x] Súbor `rozsireni` s riadkom `FUNEXP` (LF koniec riadku).
+- [x] Súbor `rozdeleni` (súčet 100 %: 23, 23, 23, 31) a `rozsireni`
+  (`FUNEXP`), v gite s LF.
+- [x] Hlavičky s menami a loginmi vo všetkých 14 súboroch `.c` / `.h`.
 - [x] **POKUSNÉ ODOVZDANIE** do 19. novembra 2026 23:59:59 (13–18 b).
 
 
@@ -199,3 +224,11 @@ Rozhodnutia (implementované):
 **Po pokusnom odovzdaní:** hotové
 
 - [x] Neuzavretá zátvorka, `/* */` na začiatku riadku, `{` / `}` (časť 3).
+- [x] Dopridavanie ulozenych AI komentarov do finalneho odovzdania
+- [x] `clang-format` (LLVM) na všetkých súboroch `.c` / `.h` vrátane testov
+  (26. 11.).
+
+**Pred finálnym odovzdaním (27. 11. 2026 11:59):**
+
+- [x] `dokumentace.pdf` a jej zdroj v gite (časť 8).
+- [x] Archív s LF a kontrola is_it_ok.sh na Merlinovi (časť 8).
